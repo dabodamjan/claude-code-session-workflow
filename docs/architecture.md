@@ -30,7 +30,7 @@ The problem: `/compact` replaces the conversation with a summary, and the summar
       <state>/compact-resume/pending/<nonce>.md
    and prints  compact-resume:stored:<nonce>  to stdout.
    Bash tool output is recorded in the session transcript, so the marker is now in the transcript.
-3. You run /compact (or press the chord).
+3. You run /compact (or press the shortcut).
 4. PreCompact (matcher manual) runs compact-resume-precompact.sh with {session_id, transcript_path}.
    It greps the transcript for each pending nonce. The one it finds is this session's.
    It moves that file to <state>/compact-resume/committed/<session_id>.md
@@ -39,8 +39,24 @@ The problem: `/compact` replaces the conversation with a summary, and the summar
 6. SessionStart (matcher compact) runs compact-resume-inject.sh with {session_id, source: "compact"}.
    It claims committed/<session_id>.md with an atomic rename, deletes it, and emits the text as
    hookSpecificOutput.additionalContext, worded as a directive to continue from it.
-7. Nothing starts a turn by itself, so the /compact chord types "go" + Enter after the compact Enter.
+7. Nothing starts a turn by itself, so the /compact shortcut types "go" + Enter after the compact Enter.
    Claude Code queues messages typed while it is busy; the queued "go" fires when compaction ends.
+```
+
+The same flow as a diagram:
+
+```
+/compact-check ──prints──▶ resume block ──pipes into──▶ compact-resume-store.sh
+                                                         writes pending/<nonce>.md
+                                                         prints compact-resume:stored:<nonce>
+                                                         (that marker lands in the transcript)
+            you press Right Option + .
+/compact ──PreCompact hook──▶ compact-resume-precompact.sh
+                              finds the pending file whose nonce is in THIS transcript
+                              moves it to committed/<session_id>.md
+         ──SessionStart(compact) hook──▶ compact-resume-inject.sh
+                              emits committed/<session_id>.md as additionalContext, once
+         ──the shortcut's queued "go"──▶ a turn starts and Claude continues from the block
 ```
 
 ### Why the nonce
@@ -55,7 +71,7 @@ PreCompact fires before compaction, while the transcript still contains the mark
 
 ### Why `additionalContext` and not `initialUserMessage`
 
-The hooks reference documents `initialUserMessage` as the first user message "in non-interactive mode with the `-p` flag". In an interactive session after `/compact` it is accepted and ignored, which I measured on 2026-08-04 with a debug trace (a clean store → precompact → inject chain and an emit that never became a turn). `additionalContext` is delivered on `source: compact`. It lands as context, not as a turn, hence the directive wording and the chord's trailing `go`.
+The hooks reference documents `initialUserMessage` as the first user message "in non-interactive mode with the `-p` flag". In an interactive session after `/compact` it is accepted and ignored, which I measured on 2026-08-04 with a debug trace (a clean store → precompact → inject chain and an emit that never became a turn). `additionalContext` is delivered on `source: compact`. It lands as context, not as a turn, hence the directive wording and the shortcut's trailing `go`.
 
 ### Guarantees the scripts give
 

@@ -38,9 +38,9 @@ These are the steps for the agent. If you are a person reading this, you can fol
    ```
    bash install/install.sh check
    ```
-   Stop and report if `python3` or `jq` is missing, or if the existing `settings.json` is not valid JSON (the installer will refuse to touch it). Tell the user which surface they are on: `/archive-session` only works in the desktop app, and the chords only on macOS with Karabiner-Elements.
+   Stop and report if `python3` or `jq` is missing, or if the existing `settings.json` is not valid JSON (the installer will refuse to touch it). Tell the user which surface they are on: `/archive-session` only works in the desktop app, and the keyboard shortcuts only on macOS with Karabiner-Elements.
 
-3. **Ask about the two optional components before planning.** The terse gate (`--terse-gate`) blocks over-long replies when the user typed `tldr`; it is useful but opinionated. Tell the user the stash hook keeps a copy of each prompt on disk for 24 hours (a private file under the kit's state directory; the Stop hook needs it to know `tldr` was asked for). The chords (`--karabiner`) need Karabiner-Elements. Default to neither unless the user says yes.
+3. **Ask about the two optional components before planning.** The terse gate (`--terse-gate`) blocks over-long replies when the user typed `tldr`; it is useful but opinionated. Tell the user the stash hook keeps a copy of each prompt on disk for 24 hours (a private file under the kit's state directory; the Stop hook needs it to know `tldr` was asked for). The keyboard shortcuts (`--karabiner`) need Karabiner-Elements. Default to neither unless the user says yes.
 
 4. **Plan, and show the user the output.**
    ```
@@ -60,7 +60,7 @@ These are the steps for the agent. If you are a person reading this, you can fol
    ```
    It checks every file is present and executable, the hook registrations exist, the `CLAUDE.md` block is present and current, whether a manifest exists (a by-hand install has none; that is a note, not a failure), and it runs the three compact-resume hooks on sample input in a temporary state directory (store → precompact → inject, then a second inject that must emit nothing). It ends with `VERIFIED` or `FAILED`. Report the result verbatim. If it fails, do not retry blindly: show the failing line.
 
-7. **Karabiner, if chosen.** The file is now in `~/.config/karabiner/assets/complex_modifications/`. Enabling it is a UI step the user does: Karabiner-Elements Settings → Complex Modifications → Add predefined rule → "Claude Code session workflow" → Enable. Tell them the chords assume a US-style layout and an empty input line. The scoped variant (`karabiner/session-workflow-scoped.json`) fires only in the Claude app, Terminal, Ghostty, VS Code and iTerm2; copy it the same way if they want the chords off elsewhere. In the Karabiner list it appears as "Claude Code session workflow (Claude app and terminals only)".
+7. **Karabiner, if chosen.** The file is now in `~/.config/karabiner/assets/complex_modifications/`. Enabling it is a UI step the user does: Karabiner-Elements Settings → Complex Modifications → Add predefined rule → "Claude Code session workflow" → Enable. Tell them the shortcuts assume a US-style layout and an empty input line. The scoped variant (`karabiner/session-workflow-scoped.json`) fires only in the Claude app, Terminal, Ghostty, VS Code and iTerm2; copy it the same way if they want the shortcuts off elsewhere. In the Karabiner list it appears as "Claude Code session workflow (Claude app and terminals only)".
 
 8. **Finish.** Tell the user: the session may need a restart for the hooks to load, which commit was installed, where the backups are, and that `bash install/install.sh uninstall` undoes what the manifest recorded (see Uninstall below for what that covers). Suggest a first run: `/compact-check` in any repo.
 

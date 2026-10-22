@@ -131,9 +131,9 @@ do_check() {
   hr "surfaces"
   if [[ "$(uname -s)" == "Darwin" ]]; then
     [[ -d "/Applications/Claude.app" ]] && say "Claude desktop app: found (/archive-session works there)" || say "Claude desktop app: not found in /Applications (/archive-session needs it)"
-    [[ -d "/Applications/Karabiner-Elements.app" ]] && say "Karabiner-Elements: found (chords available with --karabiner)" || say "Karabiner-Elements: not found (chords are optional; https://karabiner-elements.pqrs.org)"
+    [[ -d "/Applications/Karabiner-Elements.app" ]] && say "Karabiner-Elements: found (shortcuts available with --karabiner)" || say "Karabiner-Elements: not found (shortcuts are optional; https://karabiner-elements.pqrs.org)"
   else
-    say "not macOS: Karabiner chords unavailable; /archive-session needs the desktop app"
+    say "not macOS: Karabiner shortcuts unavailable; /archive-session needs the desktop app"
   fi
   if ! need python3 || ! need jq; then
     say; say "Install python3 and jq, then rerun."; return 1
