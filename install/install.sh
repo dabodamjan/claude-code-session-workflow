@@ -376,7 +376,7 @@ do_verify() {
     SESSION_WORKFLOW_STATE_DIR="$tmp/state" bash "$CFG/hooks/terse-prompt-stash.sh" \
       <<<'{"session_id":"verify-sid","prompt_id":"p1","prompt":"tldr what happened"}'
     local long; long=$(printf 'word %.0s' $(seq 1 200))
-    SESSION_WORKFLOW_STATE_DIR="$tmp/state" TERSE_LOG="$tmp/log.tsv" bash "$CFG/hooks/terse-gate.sh" \
+    TERSE_TLDR_MODE=enforce SESSION_WORKFLOW_STATE_DIR="$tmp/state" TERSE_LOG="$tmp/log.tsv" bash "$CFG/hooks/terse-gate.sh" \
       <<<"{\"session_id\":\"verify-sid\",\"prompt_id\":\"p1\",\"last_assistant_message\":\"$long\"}" >/dev/null 2>&1
     if [[ $? -eq 2 ]]; then say "ok   terse-gate blocked a 200-word tldr reply"; else say "FAIL terse-gate did not block"; fails=$((fails+1)); fi
   fi

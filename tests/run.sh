@@ -244,6 +244,8 @@ check "existing: CLAUDE.md own rules kept, block appended" 'grep -q "Always run 
 check "existing: backups taken with a timestamp" '[[ -n "$(ls -d "$CFG"/session-workflow-kit/backups/*/ 2>/dev/null)" ]] && [[ -f "$(ls -d "$CFG"/session-workflow-kit/backups/*/ | tail -1)settings.json" ]]'
 out=$(bash "$INST" verify --terse-gate 2>&1); rc=$?
 check "verify (existing, terse): passes" '[[ $rc -eq 0 ]]'
+out=$(TERSE_TLDR_MODE=observe bash "$INST" verify --terse-gate 2>&1); rc=$?
+check "verify: the dry terse run blocks even when the user's environment sets observe mode" '[[ $rc -eq 0 ]] && grep -q "terse-gate blocked" <<<"$out"'
 # 4e upgrade: block edited in place, not duplicated
 printf '\n- Another rule after the block.\n' >> "$CFG/CLAUDE.md"
 sed -i.bak 's/10 lines or 130 words/9 lines or 99 words/' "$CFG/CLAUDE.md" && rm -f "$CFG/CLAUDE.md.bak"
