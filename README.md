@@ -18,6 +18,9 @@ Every file it replaces is backed up first. Running the same install again change
 
 Needs macOS or Linux, `bash`, `jq`, `python3` 3.8 or newer and `git`; `gh` is optional. Works in the CLI, the VS Code extension and the desktop app.
 
+[![tests](https://github.com/dabodamjan/claude-code-session-workflow/actions/workflows/tests.yml/badge.svg)](https://github.com/dabodamjan/claude-code-session-workflow/actions/workflows/tests.yml)
+Installer and hook tests run against a temporary home directory.
+
 ## What you get
 
 ![Hold Right Option. Five shortcuts, one hand: comma for compact check, period for compact, slash for tldr, quote for end session, backslash for archive session.](docs/images/right-hand.webp)
