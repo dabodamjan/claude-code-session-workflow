@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # tests/run.sh: the kit's test suite. Runs in a throwaway HOME; touches nothing real.
 #
-#   bash tests/run.sh
+#   ./tests/run.sh
+#   ./tests/run.sh --system-bash    # run every script under /bin/bash (bash 3.2 on macOS)
 #
 # What it covers:
 #   1. bash -n on every script, py_compile on every Python file, Karabiner files match the generator
@@ -17,11 +18,19 @@ set -uo pipefail
 KIT=$(cd "$(dirname "$0")/.." && pwd)
 PASS=0; FAIL=0
 ok()   { PASS=$((PASS+1)); printf 'PASS %s\n' "$1"; }
-bad()  { FAIL=$((FAIL+1)); printf 'FAIL %s\n' "$1"; [[ -n "${2:-}" ]] && printf '     %s\n' "$2"; }
+bad()  { FAIL=$((FAIL+1)); printf 'FAIL %s\n' "$1"; [[ -n "${2:-}" ]] && printf '     %s\n' "$2"
+         # the last lines of the most recent captured output, as a diagnostic
+         [[ -n "${out:-}" ]] && printf '%s\n' "$out" | tail -12 | sed 's/^/     | /'; return 0; }
 check(){ if eval "$2"; then ok "$1"; else bad "$1" "cond: $2"; fi; }
 
 T=$(mktemp -d "${TMPDIR:-/tmp}/session-workflow-tests.XXXXXX")
 trap 'rm -rf "$T"' EXIT
+if [[ "${1:-}" == "--system-bash" && -x /bin/bash ]]; then
+  # Every `bash <script>` below resolves through PATH; put the system bash first so the
+  # kit is exercised under the oldest bash it claims to support.
+  mkdir -p "$T/bin" && ln -s /bin/bash "$T/bin/bash" && export PATH="$T/bin:$PATH"
+  echo "running the scripts under $(bash -c 'echo "bash $BASH_VERSION"')"
+fi
 export HOME="$T/home"; mkdir -p "$HOME"
 unset CLAUDE_CONFIG_DIR
 S="$T/state"   # hook state dir for the unit tests
@@ -66,6 +75,18 @@ check "precompact: committed newest owned block under session id" '[[ -f "$S/com
 check "precompact: older owned block deleted" '[[ ! -f "$S/compact-resume/pending/$n1.md" ]]'
 check "precompact: newest owned block moved" '[[ ! -f "$S/compact-resume/pending/$n2.md" ]]'
 check "precompact: foreign block left alone" '[[ -f "$S/compact-resume/pending/$n3.md" ]]'
+# copied transcript (a branched session): once the original has claimed its block, a fork
+# with the same transcript finds nothing
+cp "$tp" "$T/transcript-fork.jsonl"
+SESSION_WORKFLOW_STATE_DIR="$S" bash "$PRE" <<<"{\"session_id\":\"sid-fork\",\"transcript_path\":\"$T/transcript-fork.jsonl\",\"trigger\":\"manual\"}"
+check "precompact: a fork with a copied transcript gets nothing after the original claimed" '[[ ! -f "$S/compact-resume/committed/sid-fork.md" ]]'
+# ...but a fork that compacts FIRST takes the block (documented limit: the transcript is the only proof of ownership)
+m4=$(SESSION_WORKFLOW_STATE_DIR="$S" bash "$STORE" <<<"Continuing from compacted session. BLOCK-FOUR")
+printf '{"toolUseResult":"%s"}\n' "$m4" > "$T/transcript-b.jsonl"; cp "$T/transcript-b.jsonl" "$T/transcript-b-fork.jsonl"
+SESSION_WORKFLOW_STATE_DIR="$S" bash "$PRE" <<<"{\"session_id\":\"sid-bfork\",\"transcript_path\":\"$T/transcript-b-fork.jsonl\",\"trigger\":\"manual\"}"
+SESSION_WORKFLOW_STATE_DIR="$S" bash "$PRE" <<<"{\"session_id\":\"sid-b\",\"transcript_path\":\"$T/transcript-b.jsonl\",\"trigger\":\"manual\"}"
+check "precompact: whichever session compacts first takes the block, the other gets nothing" '[[ -f "$S/compact-resume/committed/sid-bfork.md" && ! -f "$S/compact-resume/committed/sid-b.md" ]]'
+rm -f "$S/compact-resume/committed/sid-bfork.md"
 # unsafe session id
 SESSION_WORKFLOW_STATE_DIR="$S" bash "$PRE" <<<"{\"session_id\":\"../evil\",\"transcript_path\":\"$tp\"}"
 check "precompact: unsafe session id ignored" '[[ ! -e "$S/compact-resume/evil.md" ]]'
@@ -93,9 +114,16 @@ check "inject: stale block not injected" '[[ -z "$out" && ! -f "$S/compact-resum
 printf 'OLD\n' > "$S/compact-resume/pending/deadbeef.md"; touch -t 202001010000 "$S/compact-resume/pending/deadbeef.md"
 SESSION_WORKFLOW_STATE_DIR="$S" bash "$STORE" <<<"fresh" >/dev/null
 check "store: prunes stale pending files" '[[ ! -f "$S/compact-resume/pending/deadbeef.md" ]]'
-# no jq -> silent no-op (simulate by emptying PATH for jq)
-out=$(PATH="$T/nopath" SESSION_WORKFLOW_STATE_DIR="$S" /bin/bash "$INJ" <<<'{"session_id":"sid-a","source":"compact"}' 2>&1)
-check "inject: without jq exits 0 silently" '[[ -z "$out" ]]'
+# no jq -> silent no-op. A PATH with every other utility the hooks use, and no jq.
+mkdir -p "$T/nojq"
+for u in cat find rm mv grep basename mkdir chmod date od tr; do p=$(command -v "$u") && ln -s "$p" "$T/nojq/$u"; done
+mkdir -p "$S/compact-resume/committed"; printf 'NOJQ\n' > "$S/compact-resume/committed/sid-nojq.md"
+out=$(PATH="$T/nojq" SESSION_WORKFLOW_STATE_DIR="$S" /bin/bash "$INJ" <<<'{"session_id":"sid-nojq","source":"compact"}' 2>"$T/nojq.err"); rc=$?
+check "inject: without jq exits 0 with no stdout and no stderr" '[[ $rc -eq 0 && -z "$out" && ! -s "$T/nojq.err" ]]'
+check "inject: without jq leaves the committed file alone" '[[ -f "$S/compact-resume/committed/sid-nojq.md" ]]'
+out=$(PATH="$T/nojq" SESSION_WORKFLOW_STATE_DIR="$S" /bin/bash "$PRE" <<<"{\"session_id\":\"sid-nojq\",\"transcript_path\":\"$tp\"}" 2>"$T/nojq.err"); rc=$?
+check "precompact: without jq exits 0 with no stdout and no stderr" '[[ $rc -eq 0 && -z "$out" && ! -s "$T/nojq.err" ]]'
+rm -f "$S/compact-resume/committed/sid-nojq.md"
 
 echo "== 3. terse hooks"
 STASH="$KIT/hooks/terse-prompt-stash.sh"; GATE="$KIT/hooks/terse-gate.sh"; LOG="$T/terse.tsv"
@@ -133,6 +161,17 @@ out=$(TERSE_LOG="$LOG" bash "$KIT/hooks/terse-report.sh" 1)
 check "report: runs and names the ceiling" 'grep -q "10 lines / 130 words" <<<"$out"'
 out=$(SESSION_WORKFLOW_STATE_DIR="$S" TERSE_LOG="$LOG" bash "$GATE" <<<'not json' 2>&1); rc=$?
 check "gate: garbage input exits 0 silently" '[[ $rc -eq 0 && -z "$out" ]]'
+# the line ceiling applies however few words the reply holds
+eleven=$(python3 -c 'print("\n".join(["w"]*11))')
+SESSION_WORKFLOW_STATE_DIR="$S" bash "$STASH" <<<'{"session_id":"s1","prompt_id":"p6","prompt":"tldr"}'
+SESSION_WORKFLOW_STATE_DIR="$S" TERSE_LOG="$LOG" bash "$GATE" <<<"$(payload s1 p6 "$eleven" 0)" >/dev/null 2>"$T/gate.err"; rc=$?
+check "gate: 11-line 11-word tldr reply is blocked (line ceiling, not word minimum)" '[[ $rc -eq 2 ]] && grep -q "across 11 lines" "$T/gate.err"'
+# a very long reply must still be evaluated, not break the hook (payload goes through a file)
+huge=$(python3 -c 'print(" ".join(["word"]*70000))')
+SESSION_WORKFLOW_STATE_DIR="$S" bash "$STASH" <<<'{"session_id":"s1","prompt_id":"p7","prompt":"tldr"}'
+SESSION_WORKFLOW_STATE_DIR="$S" TERSE_LOG="$LOG" bash "$GATE" <<<"$(payload s1 p7 "$huge" 0)" >/dev/null 2>"$T/gate.err"; rc=$?
+check "gate: a 300 KB reply is evaluated and blocked, no hook error" '[[ $rc -eq 2 ]] && grep -q "tldr ceiling exceeded" "$T/gate.err"'
+check "gate: payload temp file removed" '[[ -z "$(ls "$S/terse"/.payload.* 2>/dev/null)" ]]'
 
 echo "== 4. installer against a fake home"
 INST="$KIT/install/install.sh"; CFG="$HOME/.claude"
@@ -236,6 +275,97 @@ check "uninstall: kit files gone" '[[ ! -f "$CFG/hooks/compact-resume-inject.sh"
 check "uninstall: registrations gone" '! grep -q "compact-resume\|terse-" "$CFG/settings.json"'
 check "uninstall: CLAUDE.md block gone, other text kept" '! grep -q session-workflow-kit "$CFG/CLAUDE.md" && grep -q "keep me" "$CFG/CLAUDE.md"'
 check "uninstall: backups kept" '[[ -d "$CFG/session-workflow-kit/backups" ]]'
+# 4j help text and relative config dir
+out=$(bash "$INST" --help 2>&1)
+check "help: prints the usage block and not the script body" 'grep -q "Usage:" <<<"$out" && ! grep -q "set -uo" <<<"$out"'
+out=$(cd "$T" && bash "$INST" plan --config-dir rel-cfg 2>&1)
+check "relative --config-dir resolves against the current directory" 'grep -qF -- "files -> $(cd "$T" && pwd)/rel-cfg" <<<"$out"'
+# 4k a failed backup stops the run before the file is replaced
+rm -rf "$CFG"; mkdir -p "$CFG/hooks" "$CFG/session-workflow-kit/backups"
+printf 'ORIGINAL HOOK\n' > "$CFG/hooks/terse-gate.sh"
+chmod 555 "$CFG/session-workflow-kit/backups"
+out=$(bash "$INST" apply --yes 2>&1); rc=$?
+check "unwritable backup dir: apply aborts with exit 5" '[[ $rc -eq 5 ]] && grep -q "backup failed" <<<"$out"'
+check "unwritable backup dir: the original file is untouched" '[[ "$(cat "$CFG/hooks/terse-gate.sh")" == "ORIGINAL HOOK" ]]'
+check "unwritable backup dir: settings.json and CLAUDE.md not written" '[[ ! -f "$CFG/settings.json" && ! -f "$CFG/CLAUDE.md" ]]'
+chmod 755 "$CFG/session-workflow-kit/backups"
+# 4l registration matching: a hook that names the script under another matcher or path is a conflict, not "present"
+rm -rf "$CFG"; mkdir -p "$CFG"
+cat > "$CFG/settings.json" <<'JSON'
+{
+  "hooks": {
+    "SessionStart": [
+      {"matcher": "startup", "hooks": [{"type": "command", "command": "bash /old/compact-resume-inject.sh"}]}
+    ]
+  }
+}
+JSON
+out=$(python3 -I "$KIT/install/merge-settings.py" check --settings "$CFG/settings.json" --hooks-dir "~/.claude/hooks" 2>&1); rc=$?
+check "check: wrong matcher + path is reported missing with a conflict note" '[[ $rc -eq 1 ]] && grep -q "^conflict:" <<<"$out" && grep -q "^missing: SessionStart\[compact\]" <<<"$out"'
+out=$(bash "$INST" apply --yes 2>&1); rc=$?
+check "conflict: apply still adds the kit's registration" '[[ $rc -eq 0 ]] && grep -q "^conflict" <<<"$out" && jq -e ".hooks.SessionStart[] | select(.matcher==\"compact\") | .hooks[] | select(.command | test(\"compact-resume-inject.sh\"))" "$CFG/settings.json" >/dev/null'
+check "conflict: the conflicting hook is left as is" 'jq -e ".hooks.SessionStart[0].hooks[0].command==\"bash /old/compact-resume-inject.sh\"" "$CFG/settings.json" >/dev/null'
+out=$(bash "$INST" verify 2>&1); rc=$?
+check "conflict: verify passes once the real registration exists" '[[ $rc -eq 0 ]]'
+check "manifest: records only the registrations the kit added" '[[ "$(jq -r ".registrations | length" "$CFG/session-workflow-kit/manifest.json")" -eq 2 ]]'
+# 4m a config dir with shell-significant characters
+ODD="$T/odd \$x&y#z'q"; mkdir -p "$ODD"
+out=$(bash "$INST" apply --yes --config-dir "$ODD" 2>&1); rc=$?
+check "odd config dir: apply exits 0" '[[ $rc -eq 0 ]]'
+check "odd config dir: commands point at it literally" 'grep -qF -- "$ODD/includes/session-audit-core.md" "$ODD/commands/compact-check.md"'
+check "odd config dir: manifest is valid JSON with the exact path" '[[ "$(jq -r .config_dir "$ODD/session-workflow-kit/manifest.json")" == "$ODD" ]]'
+mkdir -p "$T/oddstate/compact-resume/committed"; printf 'ODDBLOCK\n' > "$T/oddstate/compact-resume/committed/sid-odd.md"
+cmd=$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$ODD/settings.json")
+out=$(SESSION_WORKFLOW_STATE_DIR="$T/oddstate" bash -c "$cmd" <<<'{"session_id":"sid-odd","source":"compact"}' 2>&1)
+check "odd config dir: the registered command string runs the hook" 'grep -q ODDBLOCK <<<"$out"'
+out=$(bash "$INST" verify --config-dir "$ODD" 2>&1); rc=$?
+check "odd config dir: verify passes" '[[ $rc -eq 0 ]]'
+# 4n declining changes changes nothing: existing install, no terminal, no --yes
+rm -rf "$CFG"; mkdir -p "$CFG"
+bash "$INST" apply --yes --terse-gate >/dev/null 2>&1
+chmod 644 "$CFG/hooks/compact-resume-inject.sh"
+out=$(bash "$INST" plan 2>&1)
+check "plan: a present but non-executable hook is listed as a chmod change" 'grep -q "^chmod 755: ~/.claude/hooks/compact-resume-inject.sh" <<<"$out"'
+out=$(bash "$INST" apply 2>&1 </dev/null)
+check "apply declined: the hook stays non-executable" '[[ ! -x "$CFG/hooks/compact-resume-inject.sh" ]] && grep -q "skipping" <<<"$out"'
+out=$(bash "$INST" uninstall 2>&1 </dev/null); rc=$?
+check "uninstall declined: files, registrations and manifest all stay" '[[ -f "$CFG/commands/compact-check.md" && -f "$CFG/session-workflow-kit/manifest.json" ]] && grep -q "terse-gate" "$CFG/settings.json" && grep -q "session-workflow-kit:begin" "$CFG/CLAUDE.md"'
+chmod 755 "$CFG/hooks/compact-resume-inject.sh"
+# 4o manifest commit follows the checkout even when no file changes
+jq '.commit="old"' "$CFG/session-workflow-kit/manifest.json" > "$T/m.json" && mv "$T/m.json" "$CFG/session-workflow-kit/manifest.json"
+bash "$INST" apply --yes --terse-gate >/dev/null 2>&1
+check "manifest: commit refreshed on a no-op apply" '[[ "$(jq -r .commit "$CFG/session-workflow-kit/manifest.json")" == "$(git -C "$KIT" rev-parse HEAD)" ]]'
+# 4p uninstall undoes what the manifest records: restores a replaced original, deletes created files,
+#    leaves a registration it did not add, removes a CLAUDE.md it created, keeps provenance across an upgrade
+rm -rf "$CFG"; mkdir -p "$CFG/commands" "$CFG/hooks"
+printf 'ORIGINAL COMMAND\n' > "$CFG/commands/compact-check.md"
+cat > "$CFG/settings.json" <<'JSON'
+{
+  "hooks": {
+    "SessionStart": [
+      {"matcher": "compact", "hooks": [{"type": "command", "command": "bash ~/.claude/hooks/compact-resume-inject.sh"}]}
+    ]
+  }
+}
+JSON
+out=$(bash "$INST" apply --yes --terse-gate 2>&1); rc=$?
+check "provenance: apply exits 0" '[[ $rc -eq 0 ]]'
+check "provenance: the replaced command is recorded with its backup" '[[ "$(jq -r ".files[\"commands/compact-check.md\"].action" "$CFG/session-workflow-kit/manifest.json")" == "replaced" ]] && [[ -f "$(jq -r ".files[\"commands/compact-check.md\"].backup" "$CFG/session-workflow-kit/manifest.json")" ]]'
+check "provenance: created files recorded as created" '[[ "$(jq -r ".files[\"commands/end-session.md\"].action" "$CFG/session-workflow-kit/manifest.json")" == "created" ]]'
+check "provenance: the pre-existing registration is not recorded as added" '! jq -e ".registrations[] | select(. == \"SessionStart|compact|compact-resume-inject.sh\")" "$CFG/session-workflow-kit/manifest.json" >/dev/null'
+check "provenance: CLAUDE.md recorded as created" '[[ "$(jq -r .claude_md "$CFG/session-workflow-kit/manifest.json")" == "created" ]]'
+first_backup=$(jq -r ".files[\"commands/compact-check.md\"].backup" "$CFG/session-workflow-kit/manifest.json")
+printf '\n<!-- local edit -->\n' >> "$CFG/commands/compact-check.md"
+sleep 1
+bash "$INST" apply --yes --terse-gate >/dev/null 2>&1
+check "provenance: an upgrade keeps the first backup as the original" '[[ "$(jq -r ".files[\"commands/compact-check.md\"].backup" "$CFG/session-workflow-kit/manifest.json")" == "$first_backup" ]]'
+out=$(bash "$INST" uninstall --yes 2>&1); rc=$?
+check "uninstall: exits 0 (manifest-driven)" '[[ $rc -eq 0 ]]'
+check "uninstall: the replaced original is restored" '[[ "$(cat "$CFG/commands/compact-check.md")" == "ORIGINAL COMMAND" ]]'
+check "uninstall: created files deleted" '[[ ! -f "$CFG/commands/end-session.md" && ! -f "$CFG/hooks/terse-gate.sh" ]]'
+check "uninstall: the registration the kit did not add stays" '[[ "$(grep -c compact-resume-inject "$CFG/settings.json")" -eq 1 ]] && ! grep -q "terse-" "$CFG/settings.json"'
+check "uninstall: a CLAUDE.md the kit created and that holds only the block is deleted" '[[ ! -f "$CFG/CLAUDE.md" ]]'
+check "uninstall: manifest deleted when nothing managed remains" '[[ ! -f "$CFG/session-workflow-kit/manifest.json" ]]'
 
 echo
 echo "passed: $PASS  failed: $FAIL"

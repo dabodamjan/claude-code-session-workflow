@@ -4,7 +4,7 @@
 Usage:
   update-claude-md.py plan   --file PATH --block FILE
   update-claude-md.py apply  --file PATH --block FILE --backup PATH
-  update-claude-md.py remove --file PATH --backup PATH
+  update-claude-md.py remove --file PATH --backup PATH [--delete-if-empty]
   update-claude-md.py check  --file PATH --block FILE
 
 The block file must start with the begin marker and end with the end marker:
@@ -20,6 +20,9 @@ without an end marker (or vice versa, or more than one pair) aborts with exit 4.
 Conflict surfacing: lines OUTSIDE the block that look like an existing rule on the same
 subject (they mention "tldr", "tl;dr", or a word/line ceiling or limit) are printed as
 warnings so the user can reconcile them by hand. They are never edited.
+
+remove: strips the block. With --delete-if-empty (the installer passes it when its manifest
+says the kit created the file) a file left with nothing but whitespace is deleted.
 
 check: exit 0 if the block is present and identical to the block file, 1 otherwise.
 
@@ -115,12 +118,15 @@ def strip_block(text):
 
 def write(path, new_text, backup):
     if os.path.exists(path) and backup:
-        os.makedirs(os.path.dirname(os.path.abspath(backup)), exist_ok=True)
-        shutil.copy2(path, backup)
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(backup)), exist_ok=True)
+            shutil.copy2(path, backup)
+        except OSError as e:
+            fail(5, "backup failed, nothing written: %s" % e)
     d = os.path.dirname(os.path.abspath(path))
-    os.makedirs(d, exist_ok=True)
     tmp = os.path.join(d, ".%s.tmp.%d" % (os.path.basename(path), os.getpid()))
     try:
+        os.makedirs(d, exist_ok=True)
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(new_text)
         os.replace(tmp, path)
@@ -138,6 +144,8 @@ def main():
     ap.add_argument("--file", required=True)
     ap.add_argument("--block", default=None)
     ap.add_argument("--backup", default=None)
+    ap.add_argument("--delete-if-empty", action="store_true",
+                    help="remove: delete the file when nothing but whitespace is left (the kit created it)")
     a = ap.parse_args()
 
     text = read(a.file)
@@ -187,6 +195,21 @@ def main():
     if a.mode in ("apply", "remove"):
         if a.mode == "apply" and text is not None and not a.backup:
             fail(2, "--backup is required for apply on an existing file")
+        if a.mode == "remove" and a.delete_if_empty and not new_text.strip():
+            if a.backup:
+                try:
+                    os.makedirs(os.path.dirname(os.path.abspath(a.backup)), exist_ok=True)
+                    shutil.copy2(a.file, a.backup)
+                except OSError as e:
+                    fail(5, "backup failed, nothing deleted: %s" % e)
+            try:
+                os.unlink(a.file)
+            except OSError as e:
+                fail(5, "delete failed: %s" % e)
+            print("deleted: %s (only the kit's block was in it)" % a.file)
+            if a.backup and os.path.exists(a.backup):
+                print("backup: %s" % a.backup)
+            sys.exit(0)
         write(a.file, new_text, a.backup)
         print("written: %s" % a.file)
         if a.backup and os.path.exists(a.backup):
