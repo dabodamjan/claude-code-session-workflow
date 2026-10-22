@@ -288,7 +288,14 @@ out=$(bash "$INST" apply --yes 2>&1); rc=$?
 check "unwritable backup dir: apply aborts with exit 5" '[[ $rc -eq 5 ]] && grep -q "backup failed" <<<"$out"'
 check "unwritable backup dir: the original file is untouched" '[[ "$(cat "$CFG/hooks/terse-gate.sh")" == "ORIGINAL HOOK" ]]'
 check "unwritable backup dir: settings.json and CLAUDE.md not written" '[[ ! -f "$CFG/settings.json" && ! -f "$CFG/CLAUDE.md" ]]'
+check "unwritable backup dir: files created before the abort are in the manifest" '[[ "$(jq -r ".files[\"commands/compact-check.md\"].action" "$CFG/session-workflow-kit/manifest.json")" == "created" ]]'
+check "unwritable backup dir: the untouched file is not in the manifest" '[[ "$(jq -r ".files[\"hooks/terse-gate.sh\"] // \"absent\"" "$CFG/session-workflow-kit/manifest.json")" == "absent" ]]'
 chmod 755 "$CFG/session-workflow-kit/backups"
+# the next apply finishes the job and uninstall removes what both runs did
+bash "$INST" apply --yes >/dev/null 2>&1
+bash "$INST" uninstall --yes >/dev/null 2>&1
+check "after an aborted run: uninstall deletes the files that run created" '[[ ! -f "$CFG/commands/compact-check.md" && ! -f "$CFG/hooks/compact-resume-inject.sh" ]]'
+check "after an aborted run: the original the second run replaced is restored" '[[ "$(cat "$CFG/hooks/terse-gate.sh")" == "ORIGINAL HOOK" ]]'
 # 4l registration matching: a hook that names the script under another matcher or path is a conflict, not "present"
 rm -rf "$CFG"; mkdir -p "$CFG"
 cat > "$CFG/settings.json" <<'JSON'

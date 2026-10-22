@@ -18,7 +18,8 @@
 # Every write is: backup (timestamped dir, never overwritten) -> temp file -> rename. A backup
 # that fails stops the run before the file is touched. Running plan or apply twice adds
 # nothing the second time. The manifest records what was actually created, replaced or
-# added, and uninstall undoes exactly that: replaced files come back from their backup.
+# added, even when a run stops early, and uninstall undoes exactly that: replaced files
+# come back from their backup.
 # Part of claude-code-session-workflow. Requires bash 3.2+, python3 (3.8+), jq.
 set -uo pipefail
 
@@ -26,7 +27,7 @@ KIT_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 MODE="${1:-}"
 [[ -n "$MODE" ]] && shift
 
-usage() { sed -n '2,22p' "$0"; }
+usage() { sed -n '2,23p' "$0"; }
 
 YES=0; TERSE=0; KARABINER=0; CFG_FLAG=""
 while [[ $# -gt 0 ]]; do
@@ -173,9 +174,18 @@ atomic_copy() {  # $1 src, $2 dst
 # "add: Event[matcher] script.sh" lines from merge-settings.py -> "Event|matcher|script.sh"
 added_registrations() { sed -n 's/^add: \([^[]*\)\[\([^]]*\)\] \(.*\)$/\1|\2|\3/p'; }
 
+flush_manifest() {  # record what this run did so far, even on abort
+  [[ "${#MF_ARGS[@]}" -gt 0 ]] || return 0
+  mkdir -p "$KIT_DIR" 2>/dev/null && chmod 700 "$KIT_DIR" 2>/dev/null
+  python3 -I "$MANIFEST_PY" update --manifest "$MANIFEST" --commit "$COMMIT" --config-dir "$CFG" \
+    --backup-dir "$BACKUP_DIR" "${MF_ARGS[@]}" >/dev/null 2>&1 || true
+}
+abort() { say "$*"; flush_manifest; exit 5; }
+
 plan_or_apply() {  # $1 = plan | apply
   local mode="$1" changes=0 written=0 skipped=0
   MF_ARGS=()   # what this run actually did, for the manifest
+  COMMIT=$(git -C "$KIT_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)
   need python3 || { say "python3 is required"; exit 1; }
   if [[ -f "$CFG/settings.json" ]] && ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$CFG/settings.json" 2>/dev/null; then
     say "ABORT: $CFG/settings.json is not valid JSON. Nothing was written. Fix the file, then rerun."
@@ -206,17 +216,17 @@ plan_or_apply() {  # $1 = plan | apply
     [[ "$mode" == "apply" ]] || continue
     if [[ "$st" == "chmod 755" ]]; then
       if approve "make $CFG_DISPLAY/$rel executable (chmod 755)?"; then
-        chmod 755 "$dst" || { say "chmod failed: $dst"; exit 5; }
+        chmod 755 "$dst" || abort "ABORT: chmod failed: $dst"
         written=$((written+1))
       else skipped=$((skipped+1)); fi
       continue
     fi
     if approve "write $CFG_DISPLAY/$rel?"; then
-      backup_file "$dst" "$rel" || { say "ABORT: $dst left untouched. Nothing further was written."; exit 5; }
-      atomic_copy "$STAGE/$rel" "$dst" || { say "write failed: $dst"; exit 5; }
-      if [[ "$rel" == hooks/*.sh ]]; then chmod 755 "$dst" || { say "chmod failed: $dst"; exit 5; }; fi
+      backup_file "$dst" "$rel" || abort "ABORT: $dst left untouched. Nothing further was written."
       if [[ "$st" == "create" ]]; then MF_ARGS+=(--file "$rel|created")
       else MF_ARGS+=(--file "$rel|replaced|$BACKUP_DIR/$rel"); fi
+      atomic_copy "$STAGE/$rel" "$dst" || abort "ABORT: write failed: $dst"
+      if [[ "$rel" == hooks/*.sh ]]; then chmod 755 "$dst" || abort "ABORT: chmod failed: $dst"; fi
       written=$((written+1))
     else
       skipped=$((skipped+1))
@@ -229,11 +239,11 @@ plan_or_apply() {  # $1 = plan | apply
     changes=$((changes+1))
     if [[ "$mode" == "apply" ]]; then
       if approve "write $CFG_DISPLAY/settings.json?"; then
-        mkdir -p "$BACKUP_DIR" || { say "ABORT: cannot create $BACKUP_DIR; settings.json left untouched."; exit 5; }
+        mkdir -p "$BACKUP_DIR" || abort "ABORT: cannot create $BACKUP_DIR; settings.json left untouched."
         local apply_out
         apply_out=$(python3 -I "$MERGE" apply --settings "$CFG/settings.json" \
           --hooks-dir "$HOOKS_DIR_DISPLAY" $terse_flag --backup "$BACKUP_DIR/settings.json" 2>&1) \
-          || { say "$apply_out"; say "ABORT: settings.json was not written."; exit 5; }
+          || { say "$apply_out"; abort "ABORT: settings.json was not written."; }
         local reg
         while IFS= read -r reg; do
           [[ -n "$reg" ]] && MF_ARGS+=(--registration "$reg")
@@ -249,10 +259,10 @@ plan_or_apply() {  # $1 = plan | apply
     changes=$((changes+1))
     if [[ "$mode" == "apply" ]]; then
       if approve "write $CFG_DISPLAY/CLAUDE.md?"; then
-        mkdir -p "$BACKUP_DIR" || { say "ABORT: cannot create $BACKUP_DIR; CLAUDE.md left untouched."; exit 5; }
+        mkdir -p "$BACKUP_DIR" || abort "ABORT: cannot create $BACKUP_DIR; CLAUDE.md left untouched."
         local md_out md_action=""
         md_out=$(python3 -I "$CLAUDEMD" apply --file "$CFG/CLAUDE.md" --block "$BLOCK" --backup "$BACKUP_DIR/CLAUDE.md" 2>&1) \
-          || { say "$md_out"; say "ABORT: CLAUDE.md was not written."; exit 5; }
+          || { say "$md_out"; abort "ABORT: CLAUDE.md was not written."; }
         if grep -q '^create:' <<<"$md_out"; then md_action=created
         elif grep -q '^append block:' <<<"$md_out"; then md_action=appended
         elif grep -q '^replace block:' <<<"$md_out"; then md_action=replaced; fi
@@ -274,10 +284,10 @@ plan_or_apply() {  # $1 = plan | apply
         changes=$((changes+1))
         if [[ "$mode" == "apply" ]]; then
           if approve "write $KARABINER_DST?"; then
-            backup_file "$KARABINER_DST" "karabiner/session-workflow.json" || { say "ABORT: $KARABINER_DST left untouched."; exit 5; }
-            atomic_copy "$KIT_ROOT/karabiner/session-workflow.json" "$KARABINER_DST" || { say "write failed: $KARABINER_DST"; exit 5; }
+            backup_file "$KARABINER_DST" "karabiner/session-workflow.json" || abort "ABORT: $KARABINER_DST left untouched."
             if [[ "$kst" == "create" ]]; then MF_ARGS+=(--karabiner-file "$KARABINER_DST|created")
             else MF_ARGS+=(--karabiner-file "$KARABINER_DST|replaced|$BACKUP_DIR/karabiner/session-workflow.json"); fi
+            atomic_copy "$KIT_ROOT/karabiner/session-workflow.json" "$KARABINER_DST" || abort "ABORT: write failed: $KARABINER_DST"
             written=$((written+1))
           else skipped=$((skipped+1)); fi
         fi
@@ -287,16 +297,15 @@ plan_or_apply() {  # $1 = plan | apply
   fi
 
   hr "manifest ($MANIFEST)"
-  local commit; commit=$(git -C "$KIT_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)
-  say "kit commit: $commit"
+  say "kit commit: $COMMIT"
   if [[ "$mode" == "apply" ]] && [[ $written -gt 0 || -f "$MANIFEST" ]]; then
     mkdir -p "$KIT_DIR" || { say "cannot create $KIT_DIR"; exit 5; }
     chmod 700 "$KIT_DIR" 2>/dev/null || true
     if [[ ${#MF_ARGS[@]} -gt 0 ]]; then
-      python3 -I "$MANIFEST_PY" update --manifest "$MANIFEST" --commit "$commit" --config-dir "$CFG" \
+      python3 -I "$MANIFEST_PY" update --manifest "$MANIFEST" --commit "$COMMIT" --config-dir "$CFG" \
         --backup-dir "$BACKUP_DIR" "${MF_ARGS[@]}" || exit 5
     else
-      python3 -I "$MANIFEST_PY" update --manifest "$MANIFEST" --commit "$commit" --config-dir "$CFG" \
+      python3 -I "$MANIFEST_PY" update --manifest "$MANIFEST" --commit "$COMMIT" --config-dir "$CFG" \
         --backup-dir "$BACKUP_DIR" || exit 5
     fi
   elif [[ "$mode" == "apply" ]]; then
