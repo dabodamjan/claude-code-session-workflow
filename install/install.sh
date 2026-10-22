@@ -118,6 +118,8 @@ do_check() {
   if [[ -f "$CFG/settings.json" ]]; then
     if need python3 && python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$CFG/settings.json" 2>/dev/null; then
       say "settings.json: present, valid JSON"
+    elif ! need python3; then
+      say "settings.json: present (not checked: python3 missing)"
     else
       say "settings.json: present but NOT valid JSON. The installer will refuse to touch it; fix it first."
     fi

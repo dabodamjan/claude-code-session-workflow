@@ -285,6 +285,13 @@ out=$(bash "$INST" --help 2>&1)
 check "help: prints the usage block and not the script body" 'grep -q "Usage:" <<<"$out" && ! grep -q "set -uo" <<<"$out"'
 out=$(cd "$T" && bash "$INST" plan --config-dir rel-cfg 2>&1)
 check "relative --config-dir resolves against the current directory" 'grep -qF -- "files -> $(cd "$T" && pwd)/rel-cfg" <<<"$out"'
+# check without python3: a valid settings.json is reported as unchecked, not as invalid
+rm -rf "$CFG"; mkdir -p "$CFG"; printf '{"theme": "dark"}\n' > "$CFG/settings.json"
+mkdir -p "$T/nopy"
+for u in bash uname date jq git gh head sed cat ls; do p=$(command -v "$u") && ln -s "$p" "$T/nopy/$u"; done
+out=$(PATH="$T/nopy" bash "$INST" check 2>&1); rc=$?
+check "check without python3: exits non-zero and names the missing tool" '[[ $rc -ne 0 ]] && grep -q "python3:   MISSING" <<<"$out"'
+check "check without python3: a valid settings.json is not called invalid" 'grep -q "settings.json: present (not checked: python3 missing)" <<<"$out" && ! grep -q "NOT valid JSON" <<<"$out"'
 # 4k a failed backup stops the run before the file is replaced
 rm -rf "$CFG"; mkdir -p "$CFG/hooks" "$CFG/session-workflow-kit/backups"
 printf 'ORIGINAL HOOK\n' > "$CFG/hooks/terse-gate.sh"
