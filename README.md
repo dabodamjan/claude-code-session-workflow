@@ -14,7 +14,7 @@ Read https://github.com/dabodamjan/claude-code-session-workflow and set it up fo
 
 Nothing is written before you see it. Claude runs `install.sh plan`, which lists every file it would create, update or leave alone, shows the diff of each update (long ones truncated) and the diffs of the hook entries it adds to `settings.json` and of the block it appends to `CLAUDE.md`, then asks before `apply`.
 
-Every file it replaces is backed up first. Running the same install again changes no installed file and adds no second hook entry; only the manifest's timestamp moves. `install.sh uninstall` reverses exactly what the install recorded. [What uninstall covers](INSTALL.md#uninstall) · [Manual install](INSTALL.md#path-2-by-hand) · [Tests](tests/run.sh)
+Every file it replaces is backed up first. Running the same install again changes no installed file and adds no second hook entry; only the manifest metadata is refreshed. `install.sh uninstall` reverses exactly what the install recorded. [What uninstall covers](INSTALL.md#uninstall) · [Manual install](INSTALL.md#path-2-by-hand) · [Tests](tests/run.sh)
 
 Needs macOS or Linux, `bash`, `jq`, `python3` 3.8 or newer and `git`; `gh` is optional. Works in the CLI, the VS Code extension and the desktop app.
 
