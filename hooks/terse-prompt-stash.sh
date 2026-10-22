@@ -5,8 +5,9 @@
 # Injects NOTHING into the model's context. Its only job is to write the submitted prompt
 # text to a per-turn state file keyed by session_id + prompt_id, which terse-gate.sh (Stop)
 # reads to decide whether "tldr" was asked for. The Stop hook's own payload does not carry
-# the user's prompt, and the hooks reference says transcript_path "may lag the in-memory
-# conversation", so the prompt is captured here or not at all.
+# the user's prompt, and the hooks reference says the transcript file "may lag the
+# in-memory conversation" and "isn't guaranteed to include the final message at Stop time
+# on all versions", so the prompt is captured here or not at all.
 #
 # State lives under the kit's private state dir (mode 700), never in a shared /tmp.
 # Retention is bounded: files older than one day are deleted on every run.

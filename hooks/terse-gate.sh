@@ -16,6 +16,8 @@
 #   - It does NOT see the user's prompt. terse-prompt-stash.sh (UserPromptSubmit) writes it
 #     to a per-turn file; this script reads it back. Without that hook registered, the tldr
 #     rule never fires and only the filler log runs.
+#   - The tldr ceiling is checked on every tldr turn. TERSE_MIN_WORDS only exempts short
+#     replies from the filler score.
 #
 # WHAT IT CANNOT DO (stated plainly rather than worked around)
 #   - It cannot suppress the reply you already saw. Stop fires after the response is shown.
@@ -48,7 +50,7 @@ set -uo pipefail
 : "${TERSE_TLDR_LINES:=10}"        # the tldr ceiling (lines)
 : "${TERSE_TIC_THRESHOLD:=3}"      # block when the weighted filler score reaches this
 : "${TERSE_TIC_MIN_WORDS:=40}"     # below this, a filler phrase is not padding
-: "${TERSE_MIN_WORDS:=25}"         # below this, skip the turn entirely
+: "${TERSE_MIN_WORDS:=25}"         # below this, skip the filler score (the tldr ceiling still applies)
 : "${SESSION_WORKFLOW_STATE_DIR:=${CLAUDE_CONFIG_DIR:-$HOME/.claude}/session-workflow-kit/state}"
 : "${TERSE_LOG:=${CLAUDE_CONFIG_DIR:-$HOME/.claude}/session-workflow-kit/logs/terse-gate.tsv}"
 
@@ -56,12 +58,21 @@ umask 077
 input=$(cat 2>/dev/null) || exit 0
 command -v python3 >/dev/null 2>&1 || exit 0
 
-PAYLOAD="$input" \
+# The payload goes to python through a private file, not an environment variable or an
+# argument: a long reply would exceed the OS limit on a single argument or environment
+# string and make python fail to start, which would surface as a hook error.
+pdir="$SESSION_WORKFLOW_STATE_DIR/terse"
+mkdir -p "$pdir" 2>/dev/null || exit 0
+chmod 700 "$SESSION_WORKFLOW_STATE_DIR" "$pdir" 2>/dev/null || true
+pfile="$pdir/.payload.$$"
+printf '%s' "$input" > "$pfile" 2>/dev/null || { rm -f "$pfile" 2>/dev/null; exit 0; }
+
+PAYLOAD_FILE="$pfile" \
 TERSE_TLDR_MODE="$TERSE_TLDR_MODE" TERSE_TIC_MODE="$TERSE_TIC_MODE" \
 TERSE_TLDR_WORDS="$TERSE_TLDR_WORDS" TERSE_TLDR_LINES="$TERSE_TLDR_LINES" \
 TERSE_TIC_THRESHOLD="$TERSE_TIC_THRESHOLD" TERSE_TIC_MIN_WORDS="$TERSE_TIC_MIN_WORDS" \
 TERSE_MIN_WORDS="$TERSE_MIN_WORDS" TERSE_LOG="$TERSE_LOG" \
-TERSE_STATE_DIR="$SESSION_WORKFLOW_STATE_DIR/terse" \
+TERSE_STATE_DIR="$pdir" \
 python3 -I - <<'PY'
 import os, re, sys, json, time, pathlib
 
@@ -72,7 +83,8 @@ def env_int(name, default):
         return default
 
 try:
-    d = json.loads(os.environ.get("PAYLOAD", "") or "{}")
+    with open(os.environ["PAYLOAD_FILE"], encoding="utf-8", errors="replace") as f:
+        d = json.loads(f.read() or "{}")
 except Exception:
     sys.exit(0)
 if not isinstance(d, dict):
@@ -181,17 +193,17 @@ tldr_words = env_int("TERSE_TLDR_WORDS", 130)
 tldr_lines = env_int("TERSE_TLDR_LINES", 10)
 tic_thresh = env_int("TERSE_TIC_THRESHOLD", 3)
 
+# The minimum-word exemption applies to the filler score only. The tldr ceiling is checked
+# on every tldr turn: eleven one-word lines are over the line limit however few words they hold.
 too_short = words < env_int("TERSE_MIN_WORDS", 25)
 
-tldr_over = (tldr_mode != "off" and asked_tldr and not too_short
+tldr_over = (tldr_mode != "off" and asked_tldr
              and (words > tldr_words or lines > tldr_lines))
 tic_over = (tic_mode != "off" and not too_short and score >= tic_thresh)
 
 reason = None
 if already_blocked:
     verdict = "retry-pass"
-elif too_short:
-    verdict = "skip-short"
 elif tldr_over and tldr_mode == "enforce":
     verdict = "block-tldr"
     reason = (
@@ -218,6 +230,8 @@ elif tic_over and tic_mode == "enforce":
     )
 elif tldr_over or tic_over:
     verdict = "observe-would-block"
+elif too_short:
+    verdict = "skip-short"
 else:
     verdict = "pass"
 
@@ -263,3 +277,6 @@ except Exception:
 sys.stderr.write(reason + "\n")
 sys.exit(2)
 PY
+rc=$?
+rm -f "$pfile" 2>/dev/null
+exit $rc
