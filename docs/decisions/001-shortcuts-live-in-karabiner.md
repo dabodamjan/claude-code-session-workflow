@@ -15,7 +15,7 @@ Two facts, both checked against the current docs:
 
 The binding lives one layer down, at the HID level, as a Karabiner-Elements complex modification: Right Option plus a key types the command text, waits, presses Escape, then Enter. The receiving application only sees keystrokes, so the same rule reaches the desktop app, any terminal and VS Code. I have verified the Escape-then-Enter sequence on the desktop app; the other two surfaces receive the same keys but I have not tested them.
 
-Right Option specifically, so that left Option stays free for special characters and for Claude Code's own Option+O / Option+P / Option+T bindings. The `, . /` cluster sits under the right hand's resting position, which keeps the three frequent shortcuts one-handed. The two rare ones (`'` and `\`) sit further out on purpose: a shortcut that must never fire by accident should cost a reach.
+Right Option specifically, so that left Option stays free for special characters and for Claude Code's own Option+O / Option+P / Option+T bindings. All five sit under the right hand around Right Option, so every shortcut is one-handed. The `, . /` cluster sits closest to the resting position; `'` and `\` are the two furthest keys and run the two closing commands, `/end-session` and `/archive-session`.
 
 ## What the shortcut types
 
