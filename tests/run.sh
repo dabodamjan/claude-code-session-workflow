@@ -12,8 +12,9 @@
 #      code-block exemption, non-tldr pass)
 #   4. the installer against a fake ~/.claude: fresh install, repeat install (no changes),
 #      pre-existing hooks + CLAUDE.md preserved, conflict warning, malformed settings abort,
-#      verify, uninstall
-# Exit 1 on the first failed assertion group; prints PASS/FAIL per case.
+#      check without python3, aborted run recorded in the manifest, verify (with and
+#      without a manifest), uninstall
+# Runs every case; exits 1 if any assertion failed. Prints PASS/FAIL per case.
 set -uo pipefail
 KIT=$(cd "$(dirname "$0")/.." && pwd)
 PASS=0; FAIL=0

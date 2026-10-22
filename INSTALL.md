@@ -11,7 +11,7 @@ Into your Claude Code config directory (`$CLAUDE_CONFIG_DIR` if set, else `~/.cl
 | `commands/compact-check.md`, `end-session.md`, `archive-session.md`, `session-status.md` | the four slash commands |
 | `includes/session-audit-core.md` | the audit payload the first two share |
 | `hooks/compact-resume-store.sh`, `-precompact.sh`, `-inject.sh` | the compact-resume trio |
-| `hooks/terse-prompt-stash.sh`, `terse-gate.sh`, `terse-report.sh` | the optional terse enforcer and its report |
+| `hooks/terse-prompt-stash.sh`, `terse-gate.sh`, `terse-report.sh` | the terse enforcer and its report (always copied; registered only with `--terse-gate`) |
 | `settings.json` | two hook registrations added: `PreCompact` (`manual`) and `SessionStart` (`compact`); with `--terse-gate`, two more: `UserPromptSubmit` and `Stop` |
 | `CLAUDE.md` | one block between `<!-- session-workflow-kit:begin -->` and `<!-- session-workflow-kit:end -->` with the tldr rule |
 | `session-workflow-kit/manifest.json` | what the kit did: which commit, when, which files it created or replaced (with the backup of each replaced original), which hook registrations it added, whether it created `CLAUDE.md` or appended to it |
@@ -60,7 +60,7 @@ These are the steps for the agent. If you are a person reading this, you can fol
    ```
    It checks every file is present and executable, the hook registrations exist, the `CLAUDE.md` block is present and current, whether a manifest exists (a by-hand install has none; that is a note, not a failure), and it runs the three compact-resume hooks on sample input in a temporary state directory (store → precompact → inject, then a second inject that must emit nothing). It ends with `VERIFIED` or `FAILED`. Report the result verbatim. If it fails, do not retry blindly: show the failing line.
 
-7. **Karabiner, if chosen.** The file is now in `~/.config/karabiner/assets/complex_modifications/`. Enabling it is a UI step the user does: Karabiner-Elements Settings → Complex Modifications → Add predefined rule → "Claude Code session workflow" → Enable. Tell them the chords assume a US-style layout and an empty input line, and that the scoped variant (`karabiner/session-workflow-scoped.json`, chords only in the Claude app, Terminal, Ghostty, VS Code and iTerm2) can be copied the same way if they want the chords off elsewhere; in the Karabiner list it appears as "Claude Code session workflow (Claude app and terminals only)".
+7. **Karabiner, if chosen.** The file is now in `~/.config/karabiner/assets/complex_modifications/`. Enabling it is a UI step the user does: Karabiner-Elements Settings → Complex Modifications → Add predefined rule → "Claude Code session workflow" → Enable. Tell them the chords assume a US-style layout and an empty input line. The scoped variant (`karabiner/session-workflow-scoped.json`) fires only in the Claude app, Terminal, Ghostty, VS Code and iTerm2; copy it the same way if they want the chords off elsewhere. In the Karabiner list it appears as "Claude Code session workflow (Claude app and terminals only)".
 
 8. **Finish.** Tell the user: the session may need a restart for the hooks to load, which commit was installed, where the backups are, and that `bash install/install.sh uninstall` undoes what the manifest recorded (see Uninstall below for what that covers). Suggest a first run: `/compact-check` in any repo.
 
@@ -104,7 +104,7 @@ Or copy the files yourself. Everything the installer does is plain file copies p
    Pasting the file's contents by hand works once; a second paste leaves two marker pairs, and the updater then refuses to touch the file until one pair is removed.
 4. Optional, macOS: copy `karabiner/session-workflow.json` to `~/.config/karabiner/assets/complex_modifications/` and enable it in the Karabiner UI.
 
-If your config directory is not `~/.claude`, replace `~/.claude/` in the two hook commands and in the `includes` references inside the four command files with your directory, and quote the hook path in `settings.json` if it contains spaces or other shell-significant characters. The installer does this substitution and quoting for you when `CLAUDE_CONFIG_DIR` is set or `--config-dir` is passed. A manual install has no manifest, so a later `uninstall` falls back to removing the kit's files by name.
+If your config directory is not `~/.claude`, replace `~/.claude/` in the two hook commands and in the `includes` references inside the four command files with your directory, and quote the hook path in `settings.json` if it contains spaces or other shell-significant characters. The installer does this substitution and quoting for you when `CLAUDE_CONFIG_DIR` is set or `--config-dir` is passed. A manual install has no manifest, so a later `uninstall` falls back to removing the kit's files by name. `--config-dir` is for a directory Claude Code itself uses, which means `CLAUDE_CONFIG_DIR` is set to it; the hooks find their state through that same variable.
 
 ## Upgrade
 

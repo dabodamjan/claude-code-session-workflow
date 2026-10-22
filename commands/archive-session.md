@@ -9,7 +9,7 @@ The last step of the session lifecycle: `/end-session` → the user merges the P
 
 ## 0. Capability check (do this first)
 
-Archiving needs the session-management tools the Claude Code desktop app gives Claude for its own Code-tab sessions (the desktop docs describe them as listing, renaming and archiving sessions, with an approval card before an archive). Check whether such a tool is available in this session: look for a session-management tool whose name includes `archive_session` (it may be a deferred tool you have to load first).
+Archiving needs the session-management tools the Claude Code desktop app gives Claude for its own Code-tab sessions (the desktop docs describe them as listing, renaming and archiving sessions, with an approval card before an archive in Manual mode). Check whether such a tool is available in this session: look for a session-management tool whose name includes `archive_session` (it may be a deferred tool you have to load first).
 
 If no such tool exists (terminal CLI, VS Code extension, cloud session), say so in one line and stop:
 

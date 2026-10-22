@@ -23,7 +23,7 @@ This is a guided install, not an unattended one. Claude clones the repo, runs th
 | `tldr` | Right Option + `/` | Short, plain reply: 10 lines or 130 words, ending with what you still need to do. |
 | `/end-session` | Right Option + `'` | Same audit with a harder bar: everything committed, pushed, in a PR, or handed back. Green-light checklist plus the merge links. |
 | `/archive-session` | Right Option + `\` | Checks this session's PRs are merged, then asks the desktop app to archive the session. |
-| `/session-status` | | A 20-line "what is this session doing" for when you run many at once. |
+| `/session-status` | | A short "what is this session doing" summary, under 25 lines, for when you run many at once. |
 
 ## What it looks like
 
@@ -93,7 +93,7 @@ then              Enter                   submits the command
          ──the chord's queued "go"──▶ a turn starts and Claude continues from the block
 ```
 
-The nonce step is what keeps parallel sessions apart: a slash command's shell has no reliable handle on its own session id, but the PreCompact hook does, and it also has the transcript, so ownership is proven by grepping the transcript for the marker the store step printed. One case the transcript cannot settle: a session branched with `/branch` after `/compact-check` carries a copy of the same transcript, marker included. Whichever of the two compacts first takes the block; the other finds nothing.
+The nonce step is what keeps parallel sessions apart. A slash command's shell has no reliable handle on its own session id. The PreCompact hook has both the id and the transcript, so it proves ownership by finding the marker the store step printed. One case the transcript cannot settle: a session branched with `/branch` after `/compact-check` carries a copy of the same transcript, marker included. Whichever of the two compacts first takes the block; the other finds nothing.
 
 ## Requirements
 
