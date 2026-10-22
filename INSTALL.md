@@ -58,7 +58,7 @@ These are the steps for the agent. If you are a person reading this, you can fol
    ```
    bash install/install.sh verify [--terse-gate]
    ```
-   It checks every file is present and executable, the hook registrations exist, the `CLAUDE.md` block is present and current, the manifest exists, and it runs the three compact-resume hooks on sample input in a temporary state directory (store → precompact → inject, then a second inject that must emit nothing). It ends with `VERIFIED` or `FAILED`. Report the result verbatim. If it fails, do not retry blindly: show the failing line.
+   It checks every file is present and executable, the hook registrations exist, the `CLAUDE.md` block is present and current, whether a manifest exists (a by-hand install has none; that is a note, not a failure), and it runs the three compact-resume hooks on sample input in a temporary state directory (store → precompact → inject, then a second inject that must emit nothing). It ends with `VERIFIED` or `FAILED`. Report the result verbatim. If it fails, do not retry blindly: show the failing line.
 
 7. **Karabiner, if chosen.** The file is now in `~/.config/karabiner/assets/complex_modifications/`. Enabling it is a UI step the user does: Karabiner-Elements Settings → Complex Modifications → Add predefined rule → "Claude Code session workflow" → Enable. Tell them the chords assume a US-style layout and an empty input line, and that the scoped variant (`karabiner/session-workflow-scoped.json`, chords only in the Claude app, Terminal, Ghostty, VS Code and iTerm2) can be copied the same way if they want the chords off elsewhere; in the Karabiner list it appears as "Claude Code session workflow (Claude app and terminals only)".
 

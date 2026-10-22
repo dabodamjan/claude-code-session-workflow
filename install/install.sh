@@ -353,7 +353,7 @@ do_verify() {
   hr "manifest"
   if [[ -f "$MANIFEST" ]]; then
     say "ok   $MANIFEST (commit $(python3 -I "$MANIFEST_PY" get --manifest "$MANIFEST" --key commit 2>/dev/null), installed $(python3 -I "$MANIFEST_PY" get --manifest "$MANIFEST" --key installed_at 2>/dev/null))"
-  else say "FAIL missing manifest: $MANIFEST"; fails=$((fails+1)); fi
+  else say "note: no manifest at $MANIFEST (a by-hand install?); uninstall will remove the kit's files by name"; fi
 
   hr "dry hook run (temp state dir, nothing touches your real state)"
   local tmp; tmp=$(mktemp -d "${TMPDIR:-/tmp}/session-workflow-verify.XXXXXX")

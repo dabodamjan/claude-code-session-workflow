@@ -202,6 +202,11 @@ check "repeat apply: registrations not duplicated" '[[ "$(grep -c compact-resume
 # 4c verify
 out=$(bash "$INST" verify 2>&1); rc=$?
 check "verify: passes after install" '[[ $rc -eq 0 ]] && grep -q "^VERIFIED" <<<"$out"'
+# a by-hand install has no manifest: verify notes it and still passes
+mv "$CFG/session-workflow-kit/manifest.json" "$T/manifest.aside"
+out=$(bash "$INST" verify 2>&1); rc=$?
+check "verify: a missing manifest is a note, not a failure" '[[ $rc -eq 0 ]] && grep -q "^VERIFIED" <<<"$out" && grep -q "^note: no manifest" <<<"$out"'
+mv "$T/manifest.aside" "$CFG/session-workflow-kit/manifest.json"
 # 4d pre-existing hooks + CLAUDE.md with own rules, plus terse gate
 rm -rf "$CFG"; mkdir -p "$CFG/hooks"
 cat > "$CFG/settings.json" <<'JSON'
