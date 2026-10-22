@@ -16,7 +16,7 @@
 # In an interactive session after /compact it is accepted and ignored (observed by the
 # author on 2026-08-04). additionalContext is delivered on source=compact. It lands as
 # context, not as a turn, which is why the block is worded as a directive and why the
-# /compact chord in karabiner/ types a follow-up message to start the turn.
+# /compact shortcut in karabiner/ types a follow-up message to start the turn.
 #
 # Fail-silent: any missing field, stale or absent file exits 0 with no output.
 # Part of claude-code-session-workflow (hooks/compact-resume-*.sh).

@@ -388,6 +388,20 @@ check "uninstall: created files deleted" '[[ ! -f "$CFG/commands/end-session.md"
 check "uninstall: the registration the kit did not add stays" '[[ "$(grep -c compact-resume-inject "$CFG/settings.json")" -eq 1 ]] && ! grep -q "terse-" "$CFG/settings.json"'
 check "uninstall: a CLAUDE.md the kit created and that holds only the block is deleted" '[[ ! -f "$CFG/CLAUDE.md" ]]'
 check "uninstall: manifest deleted when nothing managed remains" '[[ ! -f "$CFG/session-workflow-kit/manifest.json" ]]'
+# 4q uninstall leaves what the install did not record: a Karabiner rule file that was already
+#    there (install run without --karabiner) and a CLAUDE.md block that was already in place
+rm -rf "$CFG" "$HOME/.config/karabiner"; mkdir -p "$CFG" "$HOME/.config/karabiner/assets/complex_modifications"
+KFILE="$HOME/.config/karabiner/assets/complex_modifications/session-workflow.json"
+printf 'MY OWN RULES\n' > "$KFILE"
+printf 'my own notes\n' > "$CFG/CLAUDE.md"
+python3 -I "$KIT/install/update-claude-md.py" apply --file "$CFG/CLAUDE.md" --block "$KIT/claude-md/tldr-block.md" --backup "$T/md-backup.md" >/dev/null 2>&1
+md_before=$(cat "$CFG/CLAUDE.md")
+bash "$INST" apply --yes >/dev/null 2>&1
+check "unrecorded: the install records neither the rule file nor the block" '[[ -f "$CFG/session-workflow-kit/manifest.json" ]] && [[ "$(jq -r ".karabiner_file // .claude_md // empty" "$CFG/session-workflow-kit/manifest.json")" == "" ]]'
+out=$(bash "$INST" uninstall --yes 2>&1); rc=$?
+check "unrecorded: uninstall exits 0" '[[ $rc -eq 0 ]]'
+check "unrecorded: a Karabiner rule file the install did not record stays as it was" '[[ -f "$KFILE" && "$(cat "$KFILE")" == "MY OWN RULES" ]]'
+check "unrecorded: a CLAUDE.md block the install did not record stays as it was" '[[ "$(cat "$CFG/CLAUDE.md")" == "$md_before" ]] && grep -q session-workflow-kit:begin "$CFG/CLAUDE.md"'
 
 echo
 echo "passed: $PASS  failed: $FAIL"

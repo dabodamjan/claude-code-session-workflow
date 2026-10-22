@@ -1,0 +1,27 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tool versions
+        run: |
+          bash --version | head -1
+          /bin/bash --version | head -1
+          python3 --version
+          jq --version
+          git --version
+      - name: Run the suite
+        run: ./tests/run.sh
+      - name: Run the suite under the system bash
+        run: ./tests/run.sh --system-bash

@@ -131,9 +131,9 @@ do_check() {
   hr "surfaces"
   if [[ "$(uname -s)" == "Darwin" ]]; then
     [[ -d "/Applications/Claude.app" ]] && say "Claude desktop app: found (/archive-session works there)" || say "Claude desktop app: not found in /Applications (/archive-session needs it)"
-    [[ -d "/Applications/Karabiner-Elements.app" ]] && say "Karabiner-Elements: found (chords available with --karabiner)" || say "Karabiner-Elements: not found (chords are optional; https://karabiner-elements.pqrs.org)"
+    [[ -d "/Applications/Karabiner-Elements.app" ]] && say "Karabiner-Elements: found (shortcuts available with --karabiner)" || say "Karabiner-Elements: not found (shortcuts are optional; https://karabiner-elements.pqrs.org)"
   else
-    say "not macOS: Karabiner chords unavailable; /archive-session needs the desktop app"
+    say "not macOS: Karabiner shortcuts unavailable; /archive-session needs the desktop app"
   fi
   if ! need python3 || ! need jq; then
     say; say "Install python3 and jq, then rerun."; return 1
@@ -461,10 +461,12 @@ do_uninstall() {
   fi
 
   hr "CLAUDE.md"
-  if [[ -f "$CFG/CLAUDE.md" ]]; then
-    local md_prov="" del_flag=""
-    [[ $have_manifest -eq 1 ]] && md_prov=$(python3 -I "$MANIFEST_PY" get --manifest "$MANIFEST" --key claude_md)
-    [[ "$md_prov" == "created" ]] && del_flag="--delete-if-empty"
+  local md_prov="" del_flag=""
+  [[ $have_manifest -eq 1 ]] && md_prov=$(python3 -I "$MANIFEST_PY" get --manifest "$MANIFEST" --key claude_md)
+  [[ "$md_prov" == "created" ]] && del_flag="--delete-if-empty"
+  if [[ $have_manifest -eq 1 && -z "$md_prov" ]]; then
+    say "the manifest records no change to CLAUDE.md; left alone"
+  elif [[ -f "$CFG/CLAUDE.md" ]]; then
     if approve "remove the kit's block from $CFG_DISPLAY/CLAUDE.md?$( [[ -n "$del_flag" ]] && echo ' (the kit created the file; it is deleted if nothing else is in it)')"; then
       mkdir -p "$BACKUP_DIR" || { say "ABORT: cannot create $BACKUP_DIR"; exit 5; }
       python3 -I "$CLAUDEMD" remove --file "$CFG/CLAUDE.md" --backup "$BACKUP_DIR/CLAUDE.md" $del_flag || exit 5
@@ -476,7 +478,9 @@ do_uninstall() {
   local kline="" kpath="$KARABINER_DST" kaction="unknown" korig=""
   [[ $have_manifest -eq 1 ]] && kline=$(python3 -I "$MANIFEST_PY" get --manifest "$MANIFEST" --key karabiner_file)
   if [[ -n "$kline" ]]; then IFS='|' read -r kpath kaction korig <<<"$kline"; fi
-  if [[ -f "$kpath" ]]; then
+  if [[ $have_manifest -eq 1 && -z "$kline" ]]; then
+    say "the manifest records no rule file written by the kit; $kpath left alone"
+  elif [[ -f "$kpath" ]]; then
     say "disable the rule in Karabiner-Elements first if it is enabled"
     if remove_or_restore "$kpath" "karabiner/session-workflow.json" "$kaction" "$korig"; then
       [[ -n "$kline" ]] && PRUNE_ARGS+=(--karabiner-file)

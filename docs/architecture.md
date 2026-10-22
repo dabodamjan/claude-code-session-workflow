@@ -30,7 +30,7 @@ The problem: `/compact` replaces the conversation with a summary, and the summar
       <state>/compact-resume/pending/<nonce>.md
    and prints  compact-resume:stored:<nonce>  to stdout.
    Bash tool output is recorded in the session transcript, so the marker is now in the transcript.
-3. You run /compact (or press the chord).
+3. You run /compact (or press the shortcut).
 4. PreCompact (matcher manual) runs compact-resume-precompact.sh with {session_id, transcript_path}.
    It greps the transcript for each pending nonce. The one it finds is this session's.
    It moves that file to <state>/compact-resume/committed/<session_id>.md
@@ -39,8 +39,24 @@ The problem: `/compact` replaces the conversation with a summary, and the summar
 6. SessionStart (matcher compact) runs compact-resume-inject.sh with {session_id, source: "compact"}.
    It claims committed/<session_id>.md with an atomic rename, deletes it, and emits the text as
    hookSpecificOutput.additionalContext, worded as a directive to continue from it.
-7. Nothing starts a turn by itself, so the /compact chord types "go" + Enter after the compact Enter.
+7. Nothing starts a turn by itself, so the /compact shortcut types "go" + Enter after the compact Enter.
    Claude Code queues messages typed while it is busy; the queued "go" fires when compaction ends.
+```
+
+The same flow as a diagram:
+
+```
+/compact-check ──prints──▶ resume block ──pipes into──▶ compact-resume-store.sh
+                                                         writes pending/<nonce>.md
+                                                         prints compact-resume:stored:<nonce>
+                                                         (that marker lands in the transcript)
+            you press Right Option + .
+/compact ──PreCompact hook──▶ compact-resume-precompact.sh
+                              finds the pending file whose nonce is in THIS transcript
+                              moves it to committed/<session_id>.md
+         ──SessionStart(compact) hook──▶ compact-resume-inject.sh
+                              emits committed/<session_id>.md as additionalContext, once
+         ──the shortcut's queued "go"──▶ a turn starts and Claude continues from the block
 ```
 
 ### Why the nonce
@@ -55,7 +71,7 @@ PreCompact fires before compaction, while the transcript still contains the mark
 
 ### Why `additionalContext` and not `initialUserMessage`
 
-The hooks reference documents `initialUserMessage` as the first user message "in non-interactive mode with the `-p` flag". In an interactive session after `/compact` it is accepted and ignored, which I measured on 2026-08-04 with a debug trace (a clean store → precompact → inject chain and an emit that never became a turn). `additionalContext` is delivered on `source: compact`. It lands as context, not as a turn, hence the directive wording and the chord's trailing `go`.
+The hooks reference documents `initialUserMessage` as the first user message "in non-interactive mode with the `-p` flag". In an interactive session after `/compact` it is accepted and ignored, which I measured on 2026-08-04 with a debug trace (a clean store → precompact → inject chain and an emit that never became a turn). `additionalContext` is delivered on `source: compact`. It lands as context, not as a turn, hence the directive wording and the shortcut's trailing `go`.
 
 ### Guarantees the scripts give
 
@@ -86,7 +102,7 @@ The hooks reference documents `initialUserMessage` as the first user message "in
 
 ## The terse gate
 
-`terse-prompt-stash.sh` writes each prompt to `<state>/terse/prompt-<session>-<prompt_id>` (mode 600, deleted after a day). `terse-gate.sh` reads it back on Stop, strips fenced code and quoted lines from `last_assistant_message`, counts words and lines, and when the prompt contained `tldr` and the reply exceeds 10 lines or 130 words, exits 2 with the rewrite instruction on stderr. The ceiling applies to every tldr turn; the minimum-word threshold only exempts short replies from the filler score. The Stop payload reaches the Python part through a private temp file, not an environment variable, so a very long reply cannot push the hook over the OS limit on a single environment string. `stop_hook_active` plus a per-turn marker file guarantee at most one block per turn. Every turn is logged to a TSV, whatever the verdict, so `terse-report.sh` can show the trend. A filler-phrase score is computed alongside and only logged by default.
+`terse-prompt-stash.sh` writes each prompt to `<state>/terse/prompt-<session>-<prompt_id>` (mode 600). Prompt files older than 24 hours are deleted on the next stash-hook run; without another run, they remain on disk. `terse-gate.sh` reads it back on Stop, strips fenced code and quoted lines from `last_assistant_message`, counts words and lines, and when the prompt contained `tldr` and the reply exceeds 10 lines or 130 words, exits 2 with the rewrite instruction on stderr. The ceiling applies to every tldr turn; the minimum-word threshold only exempts short replies from the filler score. The Stop payload reaches the Python part through a private temp file, not an environment variable, so a very long reply cannot push the hook over the OS limit on a single environment string. `stop_hook_active` plus a per-turn marker file guarantee at most one block per turn. Every turn is logged to a TSV, whatever the verdict, so `terse-report.sh` can show the trend. A filler-phrase score is computed alongside and only logged by default.
 
 ## State directory
 
@@ -99,7 +115,7 @@ The hooks reference documents `initialUserMessage` as the first user message "in
     compact-resume/pending/<nonce>.md
     compact-resume/committed/<session_id>.md
     compact-resume/debug.log          only with SESSION_WORKFLOW_DEBUG=1
-    terse/prompt-<session>-<prompt>   24h retention
+    terse/prompt-<session>-<prompt>   deleted when older than 24h, on the next stash-hook run
     terse/blocked-<session>-<prompt>  per-turn loop guard
   logs/terse-gate.tsv
 ```
