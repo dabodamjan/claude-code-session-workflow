@@ -1,0 +1,467 @@
+{
+  "title": "Claude Code session workflow (Claude app and terminals only)",
+  "rules": [
+    {
+      "description": "Right Option + ,  ->  type /compact-check",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "comma",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
+          "to": [
+            {
+              "key_code": "slash",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "o",
+              "modifiers": []
+            },
+            {
+              "key_code": "m",
+              "modifiers": []
+            },
+            {
+              "key_code": "p",
+              "modifiers": []
+            },
+            {
+              "key_code": "a",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "t",
+              "modifiers": []
+            },
+            {
+              "key_code": "hyphen",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "h",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "k",
+              "modifiers": []
+            }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [
+              {
+                "key_code": "escape",
+                "modifiers": [],
+                "hold_down_milliseconds": 150
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
+            ],
+            "to_if_canceled": []
+          },
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          },
+          "conditions": [
+            {
+              "type": "frontmost_application_if",
+              "bundle_identifiers": [
+                "^com\\.anthropic\\.claudefordesktop$",
+                "^com\\.apple\\.Terminal$",
+                "^com\\.mitchellh\\.ghostty$",
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": "Right Option + .  ->  type /compact then the queued follow-up 'go'",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "period",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
+          "to": [
+            {
+              "key_code": "slash",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "o",
+              "modifiers": []
+            },
+            {
+              "key_code": "m",
+              "modifiers": []
+            },
+            {
+              "key_code": "p",
+              "modifiers": []
+            },
+            {
+              "key_code": "a",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "t",
+              "modifiers": []
+            }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [
+              {
+                "key_code": "escape",
+                "modifiers": [],
+                "hold_down_milliseconds": 150
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              },
+              {
+                "key_code": "vk_none",
+                "hold_down_milliseconds": 1200
+              },
+              {
+                "key_code": "g",
+                "modifiers": []
+              },
+              {
+                "key_code": "o",
+                "modifiers": []
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
+            ],
+            "to_if_canceled": []
+          },
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          },
+          "conditions": [
+            {
+              "type": "frontmost_application_if",
+              "bundle_identifiers": [
+                "^com\\.anthropic\\.claudefordesktop$",
+                "^com\\.apple\\.Terminal$",
+                "^com\\.mitchellh\\.ghostty$",
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": "Right Option + /  ->  type tldr",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "slash",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
+          "to": [
+            {
+              "key_code": "t",
+              "modifiers": []
+            },
+            {
+              "key_code": "l",
+              "modifiers": []
+            },
+            {
+              "key_code": "d",
+              "modifiers": []
+            },
+            {
+              "key_code": "r",
+              "modifiers": []
+            }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
+            ],
+            "to_if_canceled": []
+          },
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          },
+          "conditions": [
+            {
+              "type": "frontmost_application_if",
+              "bundle_identifiers": [
+                "^com\\.anthropic\\.claudefordesktop$",
+                "^com\\.apple\\.Terminal$",
+                "^com\\.mitchellh\\.ghostty$",
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": "Right Option + '  ->  type /end-session",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "quote",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
+          "to": [
+            {
+              "key_code": "slash",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "n",
+              "modifiers": []
+            },
+            {
+              "key_code": "d",
+              "modifiers": []
+            },
+            {
+              "key_code": "hyphen",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "i",
+              "modifiers": []
+            },
+            {
+              "key_code": "o",
+              "modifiers": []
+            },
+            {
+              "key_code": "n",
+              "modifiers": []
+            }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [
+              {
+                "key_code": "escape",
+                "modifiers": [],
+                "hold_down_milliseconds": 150
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
+            ],
+            "to_if_canceled": []
+          },
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          },
+          "conditions": [
+            {
+              "type": "frontmost_application_if",
+              "bundle_identifiers": [
+                "^com\\.anthropic\\.claudefordesktop$",
+                "^com\\.apple\\.Terminal$",
+                "^com\\.mitchellh\\.ghostty$",
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": "Right Option + \\  ->  type /archive-session",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "backslash",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
+          "to": [
+            {
+              "key_code": "slash",
+              "modifiers": []
+            },
+            {
+              "key_code": "a",
+              "modifiers": []
+            },
+            {
+              "key_code": "r",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "h",
+              "modifiers": []
+            },
+            {
+              "key_code": "i",
+              "modifiers": []
+            },
+            {
+              "key_code": "v",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "hyphen",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "i",
+              "modifiers": []
+            },
+            {
+              "key_code": "o",
+              "modifiers": []
+            },
+            {
+              "key_code": "n",
+              "modifiers": []
+            }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [
+              {
+                "key_code": "escape",
+                "modifiers": [],
+                "hold_down_milliseconds": 150
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
+            ],
+            "to_if_canceled": []
+          },
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          },
+          "conditions": [
+            {
+              "type": "frontmost_application_if",
+              "bundle_identifiers": [
+                "^com\\.anthropic\\.claudefordesktop$",
+                "^com\\.apple\\.Terminal$",
+                "^com\\.mitchellh\\.ghostty$",
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
