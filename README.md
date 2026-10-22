@@ -103,7 +103,7 @@ Fix plan:
 
 ## Who made this
 
-Damjan Dabo, indie developer in Croatia. I build ReleaseRocket (release announcements drafted from GitHub tags, with my wife Sara as co-founder) and the iOS apps Itemlist, QRGenie and BarcodeCraft. I build in public and write at [dabo.dev](https://dabo.dev). Find me on [X](https://x.com/DamjanDabo) and [LinkedIn](https://www.linkedin.com/in/damjan-dabo/). I run Claude Code daily from the desktop app.
+Damjan Dabo, indie developer in Croatia. I build [ReleaseRocket](https://www.releaserocket.io) (release announcements drafted from GitHub tags, with my wife Sara as co-founder) and the iOS apps [Itemlist](https://www.getitemlist.app), [QRGenie](https://www.qrgenie.app) and [BarcodeCraft](https://www.barcodecraft.com). I build in public and write at [dabo.dev](https://dabo.dev). Find me on [X](https://x.com/DamjanDabo) and [LinkedIn](https://www.linkedin.com/in/damjan-dabo/). I run Claude Code daily from the desktop app.
 
 ## License
 
