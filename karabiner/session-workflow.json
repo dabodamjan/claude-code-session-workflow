@@ -6,31 +6,89 @@
       "manipulators": [
         {
           "type": "basic",
-          "from": {"key_code": "comma", "modifiers": {"mandatory": ["right_option"]}},
+          "from": {
+            "key_code": "comma",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
           "to": [
-            {"key_code": "slash", "modifiers": []},
-            {"key_code": "c", "modifiers": []},
-            {"key_code": "o", "modifiers": []},
-            {"key_code": "m", "modifiers": []},
-            {"key_code": "p", "modifiers": []},
-            {"key_code": "a", "modifiers": []},
-            {"key_code": "c", "modifiers": []},
-            {"key_code": "t", "modifiers": []},
-            {"key_code": "hyphen", "modifiers": []},
-            {"key_code": "c", "modifiers": []},
-            {"key_code": "h", "modifiers": []},
-            {"key_code": "e", "modifiers": []},
-            {"key_code": "c", "modifiers": []},
-            {"key_code": "k", "modifiers": []}
+            {
+              "key_code": "slash",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "o",
+              "modifiers": []
+            },
+            {
+              "key_code": "m",
+              "modifiers": []
+            },
+            {
+              "key_code": "p",
+              "modifiers": []
+            },
+            {
+              "key_code": "a",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "t",
+              "modifiers": []
+            },
+            {
+              "key_code": "hyphen",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "h",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "k",
+              "modifiers": []
+            }
           ],
           "to_delayed_action": {
             "to_if_invoked": [
-              {"key_code": "escape", "modifiers": [], "hold_down_milliseconds": 150},
-              {"key_code": "return_or_enter", "modifiers": []}
+              {
+                "key_code": "escape",
+                "modifiers": [],
+                "hold_down_milliseconds": 150
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
             ],
             "to_if_canceled": []
           },
-          "parameters": {"basic.to_delayed_action_delay_milliseconds": 400}
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          }
         }
       ]
     },
@@ -39,29 +97,81 @@
       "manipulators": [
         {
           "type": "basic",
-          "from": {"key_code": "period", "modifiers": {"mandatory": ["right_option"]}},
+          "from": {
+            "key_code": "period",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
           "to": [
-            {"key_code": "slash", "modifiers": []},
-            {"key_code": "c", "modifiers": []},
-            {"key_code": "o", "modifiers": []},
-            {"key_code": "m", "modifiers": []},
-            {"key_code": "p", "modifiers": []},
-            {"key_code": "a", "modifiers": []},
-            {"key_code": "c", "modifiers": []},
-            {"key_code": "t", "modifiers": []}
+            {
+              "key_code": "slash",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "o",
+              "modifiers": []
+            },
+            {
+              "key_code": "m",
+              "modifiers": []
+            },
+            {
+              "key_code": "p",
+              "modifiers": []
+            },
+            {
+              "key_code": "a",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "t",
+              "modifiers": []
+            }
           ],
           "to_delayed_action": {
             "to_if_invoked": [
-              {"key_code": "escape", "modifiers": [], "hold_down_milliseconds": 150},
-              {"key_code": "return_or_enter", "modifiers": []},
-              {"key_code": "vk_none", "hold_down_milliseconds": 1200},
-              {"key_code": "g", "modifiers": []},
-              {"key_code": "o", "modifiers": []},
-              {"key_code": "return_or_enter", "modifiers": []}
+              {
+                "key_code": "escape",
+                "modifiers": [],
+                "hold_down_milliseconds": 150
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              },
+              {
+                "key_code": "vk_none",
+                "hold_down_milliseconds": 1200
+              },
+              {
+                "key_code": "g",
+                "modifiers": []
+              },
+              {
+                "key_code": "o",
+                "modifiers": []
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
             ],
             "to_if_canceled": []
           },
-          "parameters": {"basic.to_delayed_action_delay_milliseconds": 400}
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          }
         }
       ]
     },
@@ -70,20 +180,44 @@
       "manipulators": [
         {
           "type": "basic",
-          "from": {"key_code": "slash", "modifiers": {"mandatory": ["right_option"]}},
+          "from": {
+            "key_code": "slash",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
           "to": [
-            {"key_code": "t", "modifiers": []},
-            {"key_code": "l", "modifiers": []},
-            {"key_code": "d", "modifiers": []},
-            {"key_code": "r", "modifiers": []}
+            {
+              "key_code": "t",
+              "modifiers": []
+            },
+            {
+              "key_code": "l",
+              "modifiers": []
+            },
+            {
+              "key_code": "d",
+              "modifiers": []
+            },
+            {
+              "key_code": "r",
+              "modifiers": []
+            }
           ],
           "to_delayed_action": {
             "to_if_invoked": [
-              {"key_code": "return_or_enter", "modifiers": []}
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
             ],
             "to_if_canceled": []
           },
-          "parameters": {"basic.to_delayed_action_delay_milliseconds": 400}
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          }
         }
       ]
     },
@@ -92,29 +226,81 @@
       "manipulators": [
         {
           "type": "basic",
-          "from": {"key_code": "quote", "modifiers": {"mandatory": ["right_option"]}},
+          "from": {
+            "key_code": "quote",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
           "to": [
-            {"key_code": "slash", "modifiers": []},
-            {"key_code": "e", "modifiers": []},
-            {"key_code": "n", "modifiers": []},
-            {"key_code": "d", "modifiers": []},
-            {"key_code": "hyphen", "modifiers": []},
-            {"key_code": "s", "modifiers": []},
-            {"key_code": "e", "modifiers": []},
-            {"key_code": "s", "modifiers": []},
-            {"key_code": "s", "modifiers": []},
-            {"key_code": "i", "modifiers": []},
-            {"key_code": "o", "modifiers": []},
-            {"key_code": "n", "modifiers": []}
+            {
+              "key_code": "slash",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "n",
+              "modifiers": []
+            },
+            {
+              "key_code": "d",
+              "modifiers": []
+            },
+            {
+              "key_code": "hyphen",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "i",
+              "modifiers": []
+            },
+            {
+              "key_code": "o",
+              "modifiers": []
+            },
+            {
+              "key_code": "n",
+              "modifiers": []
+            }
           ],
           "to_delayed_action": {
             "to_if_invoked": [
-              {"key_code": "escape", "modifiers": [], "hold_down_milliseconds": 150},
-              {"key_code": "return_or_enter", "modifiers": []}
+              {
+                "key_code": "escape",
+                "modifiers": [],
+                "hold_down_milliseconds": 150
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
             ],
             "to_if_canceled": []
           },
-          "parameters": {"basic.to_delayed_action_delay_milliseconds": 400}
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          }
         }
       ]
     },
@@ -123,33 +309,97 @@
       "manipulators": [
         {
           "type": "basic",
-          "from": {"key_code": "backslash", "modifiers": {"mandatory": ["right_option"]}},
+          "from": {
+            "key_code": "backslash",
+            "modifiers": {
+              "mandatory": [
+                "right_option"
+              ]
+            }
+          },
           "to": [
-            {"key_code": "slash", "modifiers": []},
-            {"key_code": "a", "modifiers": []},
-            {"key_code": "r", "modifiers": []},
-            {"key_code": "c", "modifiers": []},
-            {"key_code": "h", "modifiers": []},
-            {"key_code": "i", "modifiers": []},
-            {"key_code": "v", "modifiers": []},
-            {"key_code": "e", "modifiers": []},
-            {"key_code": "hyphen", "modifiers": []},
-            {"key_code": "s", "modifiers": []},
-            {"key_code": "e", "modifiers": []},
-            {"key_code": "s", "modifiers": []},
-            {"key_code": "s", "modifiers": []},
-            {"key_code": "i", "modifiers": []},
-            {"key_code": "o", "modifiers": []},
-            {"key_code": "n", "modifiers": []}
+            {
+              "key_code": "slash",
+              "modifiers": []
+            },
+            {
+              "key_code": "a",
+              "modifiers": []
+            },
+            {
+              "key_code": "r",
+              "modifiers": []
+            },
+            {
+              "key_code": "c",
+              "modifiers": []
+            },
+            {
+              "key_code": "h",
+              "modifiers": []
+            },
+            {
+              "key_code": "i",
+              "modifiers": []
+            },
+            {
+              "key_code": "v",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "hyphen",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "e",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "s",
+              "modifiers": []
+            },
+            {
+              "key_code": "i",
+              "modifiers": []
+            },
+            {
+              "key_code": "o",
+              "modifiers": []
+            },
+            {
+              "key_code": "n",
+              "modifiers": []
+            }
           ],
           "to_delayed_action": {
             "to_if_invoked": [
-              {"key_code": "escape", "modifiers": [], "hold_down_milliseconds": 150},
-              {"key_code": "return_or_enter", "modifiers": []}
+              {
+                "key_code": "escape",
+                "modifiers": [],
+                "hold_down_milliseconds": 150
+              },
+              {
+                "key_code": "return_or_enter",
+                "modifiers": []
+              }
             ],
             "to_if_canceled": []
           },
-          "parameters": {"basic.to_delayed_action_delay_milliseconds": 400}
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 400
+          }
         }
       ]
     }
