@@ -1,6 +1,8 @@
 # Claude Code session workflow
 
-Four slash commands, three small hooks and five one-handed chords that close the loop around `/compact` and the end of a session. `/compact-check` audits the repo, drives it to a clean state and writes a resume block; the hooks inject that block back after `/compact` so you never copy and paste it; `/end-session` refuses to green-light while anything of value lives only in chat or an unpushed branch; `/archive-session` closes the session once its PRs are merged. A `tldr` reply rule keeps answers short, with an optional hook that enforces the ceiling. It is the setup I run every day.
+Four slash commands, a pair of hooks and five one-handed chords that close the loop around `/compact` and the end of a session.
+
+`/compact-check` audits the repo, drives it to a clean state and writes a resume block. The hooks put that block back after `/compact`, so you never copy and paste it. `/end-session` refuses to green-light while anything of value lives only in chat or on an unpushed branch. `/archive-session` closes the session once its PRs are merged. A `tldr` reply rule keeps answers short, with an optional hook that enforces the ceiling. This is the setup I run every day.
 
 ## Install with one prompt
 
@@ -10,13 +12,13 @@ Paste this into Claude Code:
 Read https://github.com/dabodamjan/claude-code-session-workflow and set it up for me by following its INSTALL.md.
 ```
 
-This is a guided install, not an unattended one. Claude clones the repo, runs the requirements check, shows you every change as a diff (the files it copies, the hook registrations it adds to `settings.json`, the block it appends to `CLAUDE.md`), asks before writing, backs up every file it replaces, and verifies the result with a dry run of the hooks. Running it twice adds nothing the second time. If you would rather not have an agent touch your config, [INSTALL.md](INSTALL.md) has the manual path too.
+This is a guided install, not an unattended one. Claude clones the repo, runs the requirements check, shows you every change as a diff (the files it copies, the hook registrations it adds to `settings.json`, the block it appends to `CLAUDE.md`), asks before writing, backs up every file it replaces, and verifies the result with a dry run of the hooks. Running it twice adds nothing the second time. `uninstall` undoes what the install recorded: files the kit created go, files it replaced come back from their backup, and only the registrations it added are removed. If you would rather not have an agent touch your config, [INSTALL.md](INSTALL.md) has the manual path too.
 
 ## What you get
 
 | You type | Or press | What happens |
 | --- | --- | --- |
-| `/compact-check` | Right Option + `,` | Audits the repo (tree, upstream, PR, conflicts, type check, unwritten chat content). 🟢 prints a resume block and stores it for the hooks. 🟡 / 🔴 lists the fixes and does the file-side ones. |
+| `/compact-check` | Right Option + `,` | Audits the repo (tree, upstream, PR, conflicts, type check, unwritten chat content). A green verdict prints a resume block and stores it for the hooks. Yellow or red lists the fixes and does the file-side ones. |
 | `/compact` | Right Option + `.` | Claude Code's own compact. The hooks inject the stored resume block into the compacted session; the chord also types a `go` that starts the next turn. |
 | `tldr` | Right Option + `/` | Short, plain reply: 10 lines or 130 words, ending with what you still need to do. |
 | `/end-session` | Right Option + `'` | Same audit with a harder bar: everything committed, pushed, in a PR, or handed back. Green-light checklist plus the merge links. |
@@ -71,7 +73,7 @@ A chord firing, keystroke by keystroke:
 ```
 you press         Right Option + ,
 Karabiner types   /compact-check          the slash opens Claude Code's autocomplete menu
-400 ms later      Escape                  closes the menu; Enter is not bound while it is open
+400 ms later      Escape                  closes the menu; Enter does not submit while a suggestion is highlighted
 then              Enter                   submits the command
 ```
 
@@ -91,7 +93,7 @@ then              Enter                   submits the command
          ──the chord's queued "go"──▶ a turn starts and Claude continues from the block
 ```
 
-The nonce step is what keeps parallel sessions apart: a slash command's shell has no reliable handle on its own session id, but the PreCompact hook does, and it also has the transcript, so ownership is proven by grepping the transcript for the marker the store step printed.
+The nonce step is what keeps parallel sessions apart: a slash command's shell has no reliable handle on its own session id, but the PreCompact hook does, and it also has the transcript, so ownership is proven by grepping the transcript for the marker the store step printed. One case the transcript cannot settle: a session branched with `/branch` after `/compact-check` carries a copy of the same transcript, marker included. Whichever of the two compacts first takes the block; the other finds nothing.
 
 ## Requirements
 
@@ -106,22 +108,22 @@ The nonce step is what keeps parallel sessions apart: a slash command's shell ha
 - **`/archive-session` is desktop-only.** It uses the session tools the desktop app gives Claude. In the CLI, VS Code or a cloud session it says so and stops.
 - **The chords are macOS-only and assume a US-style layout** and an empty input line. They type text; if something is already in the input box, that text gets the command appended. On another layout, `karabiner/build.py` says how to find your key codes.
 - **Slash commands cannot be bound to a key inside Claude Code.** `~/.claude/keybindings.json` binds built-in actions only, and none of them types text or runs a command. That is why the chord lives one layer down, in Karabiner. [docs/decisions/001-chords-live-in-karabiner.md](docs/decisions/001-chords-live-in-karabiner.md) has the full reasoning.
-- **Escape before Enter.** Typing `/` opens the autocomplete menu, and in that menu Enter is not bound (Tab accepts, Escape dismisses), so a synthetic Enter does nothing. The chord presses Escape first. Tab would be wrong: it accepts whatever is highlighted, and `/compact` prefix-matches `/compact-check`.
+- **Escape before Enter.** Typing `/` opens the command menu. The docs say plain Enter does not submit while a suggestion is highlighted (Tab accepts it, Escape closes the menu), and that in fullscreen rendering the list opens with no row highlighted. Escape first covers both cases; Tab would be wrong because it accepts whatever is highlighted, and `/compact` prefix-matches `/compact-check`. I have verified the sequence on the desktop app only.
 - **Injection is not resumption.** The post-compact hook puts the block in context; the Claude Code docs say the `initialUserMessage` output is for `-p` mode, so nothing starts a turn. The `/compact` chord types `go` afterwards. Claude Code documents that messages typed while it is busy are queued; that this also holds during a compaction is something I have only observed on my own machine.
 - **Only manual `/compact`.** The hooks register for the `manual` matcher. Auto-compact gets no resume block because nobody ran `/compact-check` before it.
 - **Session id across compaction.** The inject hook assumes the session id is the same before and after a compaction. I measured that on my machine; the docs do not promise it.
-- **The terse gate is best-effort.** It is a Stop hook: it fires after the reply was already shown, it sees only the final message of a turn, and it counts words and lines (prose only, code and quotes exempt). A block produces a second, shorter reply; it does not retract the first. Without the UserPromptSubmit stash hook it cannot know you typed `tldr`. CLAUDE.md itself is context, not enforcement, which is the whole reason the hook exists.
+- **The terse gate is best-effort.** It is a Stop hook: it fires after the reply was already shown, it sees only the final message of a turn, and it counts words and lines (prose only, code and quotes exempt). A block produces a second, shorter reply; it does not retract the first. The UserPromptSubmit stash hook writes each prompt's text to a private file (mode 600) under the kit's state directory and deletes it after a day; without it the gate cannot know you typed `tldr`. CLAUDE.md itself is context, not enforcement, which is the whole reason the hook exists.
 - **The commands use the `commands/` file format.** Claude Code documents it as the older format that still works; skills are the newer one. If that changes, the four files port one-to-one.
 
 ## Prior art
 
 - [claude-handoff](https://github.com/392fyc/claude-handoff): a `/handoff` command that writes a handoff document and a SessionStart hook that injects it into a *new* session. Explicit only, no PreCompact. This kit stays inside the same session and is gated on a repo audit.
-- [A PreCompact snapshot with a SessionStart(compact) restore](https://zenn.dev/ryuka_lucas/articles/1e50ed03029b49?locale=en): saves recent messages automatically before compaction and injects them after. Automatic and content-based; this kit is deliberate and state-based, with a nonce so parallel sessions never cross.
+- [A PreCompact snapshot with a SessionStart(compact) restore](https://zenn.dev/ryuka_lucas/articles/1e50ed03029b49?locale=en): saves recent messages automatically before compaction and injects them after. Automatic and content-based; this kit is deliberate and state-based, with a nonce that ties a block to the session whose transcript holds its marker.
 - [anthropics/claude-code#11455](https://github.com/anthropics/claude-code/issues/11455): the feature request for a built-in handoff file.
 
 ## Who made this
 
-Damjan Dabo, indie developer in Croatia. I build ReleaseRocket (release announcements drafted from GitHub tags, with my wife Sara as co-founder) and the iOS apps Itemlist, QRGenie and BarcodeCraft. I build in public and write at [dabo.dev](https://dabo.dev). Find me on [X](https://x.com/DamjanDabo) and [LinkedIn](https://www.linkedin.com/in/damjan-dabo/). I run Claude Code daily from the desktop app; this kit is the setup I actually use.
+Damjan Dabo, indie developer in Croatia. I build ReleaseRocket (release announcements drafted from GitHub tags, with my wife Sara as co-founder) and the iOS apps Itemlist, QRGenie and BarcodeCraft. I build in public and write at [dabo.dev](https://dabo.dev). Find me on [X](https://x.com/DamjanDabo) and [LinkedIn](https://www.linkedin.com/in/damjan-dabo/). I run Claude Code daily from the desktop app.
 
 ## License
 

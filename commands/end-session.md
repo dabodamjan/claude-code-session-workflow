@@ -13,11 +13,11 @@ Where `/compact-check` is a safety net before lossy summarization, `/end-session
 
 ## Detect which repos to check
 
-Read `~/.claude/includes/session-audit-core.md` and apply **§1**.
+Read `~/.claude/includes/session-audit-core.md` once, then apply **§1**.
 
 ## Run these checks in parallel
 
-Read `~/.claude/includes/session-audit-core.md` and apply **§2** (checks 1 to 9 and the "do not run" list) and **§3** (the check-9 unwritten-content detail). Then run the **end-session-only checks 10 to 13** below. Total budget under 5 seconds per repo.
+Apply **§2** (checks 1 to 9 and the "do not run" list) and **§3** (the check-9 unwritten-content detail) of the include. Then run the **end-session-only checks 10 to 13** below. Total budget under 5 seconds per repo.
 
 **end-session verdict mapping for §2 and §3.** The session is ending and the container may be reclaimed, so several caution-level items from `/compact-check` become hard **❌** blockers here:
 - Severity symbols are ✅ / ❌.
@@ -143,9 +143,9 @@ One line per PR this session needs merged, full `https://github.com/...` URL eve
 
 ## Output discipline
 
-Read `~/.claude/includes/session-audit-core.md` and apply **§7**. end-session specifics on top of the shared rules:
+Apply **§7** of the include. end-session specifics on top of the shared rules:
 
 - The clean-exit hand-off is the **Green-light checklist** (3b), followed by the merge footer as the message's final lines. Never emit it alongside a ❌ verdict.
-- Every git action waits for the user's yes (§6 of the include). Never merge.
+- Every git action waits for the user's yes (§6 of the include). Never merge a PR; merging the base branch into the working branch to resolve a conflict is a git action like any other and needs its own yes.
 - If `gh` is not installed or there is no remote, say "unknown" / "n/a" and do not go green. Surface the no-remote case loudly: an unpushed branch with no remote is data that lives only on this machine or container.
 - The green-light block stays at or under 15 lines.

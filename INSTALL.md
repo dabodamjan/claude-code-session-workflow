@@ -1,6 +1,6 @@
 # Install
 
-Two paths: let Claude Code do it (guided, with approvals), or do it by hand. Both end with the same files in the same places. Everything the installer writes is backed up first, written atomically, and can be removed again with `uninstall`.
+Two paths: let Claude Code do it (guided, with approvals), or do it by hand. Both end with the same files in the same places. Everything the installer writes is backed up first and written atomically. A manifest records what the installer actually did, and `uninstall` undoes exactly that: files the kit created are deleted, files it replaced come back from their backup, only the hook registrations it added are removed.
 
 ## What gets installed
 
@@ -14,7 +14,7 @@ Into your Claude Code config directory (`$CLAUDE_CONFIG_DIR` if set, else `~/.cl
 | `hooks/terse-prompt-stash.sh`, `terse-gate.sh`, `terse-report.sh` | the optional terse enforcer and its report |
 | `settings.json` | two hook registrations added: `PreCompact` (`manual`) and `SessionStart` (`compact`); with `--terse-gate`, two more: `UserPromptSubmit` and `Stop` |
 | `CLAUDE.md` | one block between `<!-- session-workflow-kit:begin -->` and `<!-- session-workflow-kit:end -->` with the tldr rule |
-| `session-workflow-kit/manifest.json` | which commit was installed, when, with which options |
+| `session-workflow-kit/manifest.json` | what the kit did: which commit, when, which files it created or replaced (with the backup of each replaced original), which hook registrations it added, whether it created `CLAUDE.md` or appended to it |
 | `session-workflow-kit/backups/<timestamp>/` | every file the installer replaced, one directory per run |
 | `session-workflow-kit/state/` | the hooks' private state (mode 700) |
 
@@ -26,9 +26,12 @@ These are the steps for the agent. If you are a person reading this, you can fol
 
 1. **Clone and read.**
    ```
+   cd "$(mktemp -d)"
    git clone https://github.com/dabodamjan/claude-code-session-workflow.git
    cd claude-code-session-workflow
    ```
+   The clone is only needed for this install; the manifest records the commit. If a checkout already exists (an earlier install or upgrade), reuse it instead of cloning: confirm `git remote get-url origin` names this repository, then `git pull`.
+
    Read `README.md` (what the kit is and its limits) and this file. Tell the user in two sentences what will be installed and that nothing is written before they approve the plan.
 
 2. **Check requirements.**
@@ -37,7 +40,7 @@ These are the steps for the agent. If you are a person reading this, you can fol
    ```
    Stop and report if `python3` or `jq` is missing, or if the existing `settings.json` is not valid JSON (the installer will refuse to touch it). Tell the user which surface they are on: `/archive-session` only works in the desktop app, and the chords only on macOS with Karabiner-Elements.
 
-3. **Ask about the two optional components before planning.** The terse gate (`--terse-gate`) blocks over-long replies when the user typed `tldr`; it is useful but opinionated. The chords (`--karabiner`) need Karabiner-Elements. Default to neither unless the user says yes.
+3. **Ask about the two optional components before planning.** The terse gate (`--terse-gate`) blocks over-long replies when the user typed `tldr`; it is useful but opinionated. Tell the user the stash hook keeps a copy of each prompt on disk for 24 hours (a private file under the kit's state directory; the Stop hook needs it to know `tldr` was asked for). The chords (`--karabiner`) need Karabiner-Elements. Default to neither unless the user says yes.
 
 4. **Plan, and show the user the output.**
    ```
@@ -49,7 +52,7 @@ These are the steps for the agent. If you are a person reading this, you can fol
    ```
    bash install/install.sh apply [--terse-gate] [--karabiner] --yes
    ```
-   `--yes` means "the user approved the plan above"; without a terminal to ask on, `apply` writes nothing unless it is given. The run prints the backup directory and the rollback line. Pin the revision: the manifest records `git rev-parse HEAD` of the checkout you installed from; mention that commit in your summary.
+   `--yes` means "the user approved the plan above"; without a terminal to ask on, `apply` writes nothing unless it is given, and that includes the permission change on a hook that is present but not executable. The run prints the backup directory and the undo line. Pin the revision: the manifest records `git rev-parse HEAD` of the checkout you installed from; mention that commit in your summary.
 
 6. **Verify.**
    ```
@@ -57,22 +60,25 @@ These are the steps for the agent. If you are a person reading this, you can fol
    ```
    It checks every file is present and executable, the hook registrations exist, the `CLAUDE.md` block is present and current, the manifest exists, and it runs the three compact-resume hooks on sample input in a temporary state directory (store → precompact → inject, then a second inject that must emit nothing). It ends with `VERIFIED` or `FAILED`. Report the result verbatim. If it fails, do not retry blindly: show the failing line.
 
-7. **Karabiner, if chosen.** The file is now in `~/.config/karabiner/assets/complex_modifications/`. Enabling it is a UI step the user does: Karabiner-Elements Settings → Complex Modifications → Add predefined rule → "Claude Code session workflow" → Enable. Tell them the chords assume a US-style layout and an empty input line, and that the scoped variant (`karabiner/session-workflow-scoped.json`, chords only in the Claude app, Terminal, Ghostty and VS Code) can be copied the same way if they want the chords off elsewhere.
+7. **Karabiner, if chosen.** The file is now in `~/.config/karabiner/assets/complex_modifications/`. Enabling it is a UI step the user does: Karabiner-Elements Settings → Complex Modifications → Add predefined rule → "Claude Code session workflow" → Enable. Tell them the chords assume a US-style layout and an empty input line, and that the scoped variant (`karabiner/session-workflow-scoped.json`, chords only in the Claude app, Terminal, Ghostty, VS Code and iTerm2) can be copied the same way if they want the chords off elsewhere; in the Karabiner list it appears as "Claude Code session workflow (Claude app and terminals only)".
 
-8. **Finish.** Tell the user: the session may need a restart for the hooks to load, which commit was installed, where the backups are, and that `bash install/install.sh uninstall` reverses it. Suggest a first run: `/compact-check` in any repo.
+8. **Finish.** Tell the user: the session may need a restart for the hooks to load, which commit was installed, where the backups are, and that `bash install/install.sh uninstall` undoes what the manifest recorded (see Uninstall below for what that covers). Suggest a first run: `/compact-check` in any repo.
 
 ## Path 2: by hand
 
 Same result, no agent:
 
 ```
+cd "$(mktemp -d)"
 git clone https://github.com/dabodamjan/claude-code-session-workflow.git
 cd claude-code-session-workflow
 bash install/install.sh check
 bash install/install.sh plan            # read the diffs
-bash install/install.sh apply           # asks y/N per file; or add --yes
+bash install/install.sh apply           # asks y/N per change; or add --yes
 bash install/install.sh verify
 ```
+
+With an existing checkout, `git pull` in it instead of cloning.
 
 Or copy the files yourself. Everything the installer does is plain file copies plus two edits:
 
@@ -91,14 +97,18 @@ Or copy the files yourself. Everything the installer does is plain file copies p
    }
    ```
    For the terse gate, add `UserPromptSubmit` → `bash ~/.claude/hooks/terse-prompt-stash.sh` (timeout 5) and `Stop` → `bash ~/.claude/hooks/terse-gate.sh` (timeout 15), both without a matcher.
-3. Append the contents of `claude-md/tldr-block.md` to `~/.claude/CLAUDE.md`, markers included.
+3. Add the block from `claude-md/tldr-block.md` to `~/.claude/CLAUDE.md` through the marked-block updater, which replaces an existing block instead of appending a second one:
+   ```
+   python3 install/update-claude-md.py apply --file ~/.claude/CLAUDE.md --block claude-md/tldr-block.md --backup ~/.claude/CLAUDE.md.bak
+   ```
+   Pasting the file's contents by hand works once; a second paste leaves two marker pairs, and the updater then refuses to touch the file until one pair is removed.
 4. Optional, macOS: copy `karabiner/session-workflow.json` to `~/.config/karabiner/assets/complex_modifications/` and enable it in the Karabiner UI.
 
-If your config directory is not `~/.claude`, replace `~/.claude/` in the two hook commands and in the `includes` references inside the four command files with your directory. The installer does this substitution for you when `CLAUDE_CONFIG_DIR` is set or `--config-dir` is passed.
+If your config directory is not `~/.claude`, replace `~/.claude/` in the two hook commands and in the `includes` references inside the four command files with your directory, and quote the hook path in `settings.json` if it contains spaces or other shell-significant characters. The installer does this substitution and quoting for you when `CLAUDE_CONFIG_DIR` is set or `--config-dir` is passed. A manual install has no manifest, so a later `uninstall` falls back to removing the kit's files by name.
 
 ## Upgrade
 
-Pull the repo and run `plan` then `apply` again. Files that changed show a diff; the `CLAUDE.md` block is replaced between its markers (your own text around it is untouched); hook registrations that already exist are reported as `present` and not added again. The manifest's commit moves to the new revision.
+Pull the repo and run `plan` then `apply` again. Files that changed show a diff; the `CLAUDE.md` block is replaced between its markers (your own text around it is untouched); hook registrations that already exist under the right event, matcher and path are reported as `present` and not added again. A hook that names a kit script under another matcher or another path is reported as a `conflict`, left alone, and the kit's own registration is added next to it. The manifest's commit moves to the new revision even when no file changed, and the provenance of each file is kept: an original the kit replaced on the first install stays restorable after any number of upgrades.
 
 ## Uninstall
 
@@ -106,7 +116,15 @@ Pull the repo and run `plan` then `apply` again. Files that changed show a diff;
 bash install/install.sh uninstall [--yes]
 ```
 
-Removes the kit's files, its hook registrations and its `CLAUDE.md` block, each after a prompt (or all at once with `--yes`). Backups and logs under `session-workflow-kit/` are kept. Disable the Karabiner rule in the UI before deleting its file.
+Undoes what the manifest recorded, each item after a prompt (or all at once with `--yes`):
+
+- a file the kit created is deleted; a file the kit replaced is restored from the backup of the original
+- only the hook registrations the kit added are removed; one that was already there, even if it runs a kit script, stays
+- the `CLAUDE.md` block is removed; a `CLAUDE.md` the kit created is deleted if nothing else is in it, and one the kit appended to keeps everything outside the block
+- the Karabiner rule file is deleted or restored the same way (disable the rule in the UI first)
+- the manifest is deleted only when nothing managed remains; a declined prompt keeps it, so a later run can finish the job
+
+Backups and logs under `session-workflow-kit/` are kept. Without a manifest (a manual install), the kit's files are removed by name and registrations that run a kit script under the hooks directory are removed; nothing can be restored that way.
 
 ## Tunables
 
@@ -120,3 +138,5 @@ All optional, as environment variables for the hooks:
 | `TERSE_TLDR_MODE` / `TERSE_TIC_MODE` | `enforce` / `observe` | `enforce`, `observe` or `off` |
 | `TERSE_TLDR_WORDS` / `TERSE_TLDR_LINES` | `130` / `10` | the tldr ceiling; keep in sync with the CLAUDE.md block |
 | `TERSE_LOG` | `<config dir>/session-workflow-kit/logs/terse-gate.tsv` | the per-turn log `terse-report.sh` reads |
+
+Set them in the `env` block of `settings.json` (for example `"env": {"TERSE_TLDR_MODE": "observe"}`) or export them before starting Claude Code; hooks inherit Claude Code's environment.

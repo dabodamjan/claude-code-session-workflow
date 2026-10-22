@@ -45,7 +45,9 @@ The problem: `/compact` replaces the conversation with a summary, and the summar
 
 ### Why the nonce
 
-A slash command's shell has no reliable handle on the current session id: it is delivered to hooks on stdin, not exposed to the Bash tool, and the per-project transcript directory can hold many files from parallel sessions, so "the newest transcript" is not this session either. The store step therefore keys by an unguessable nonce, and the PreCompact hook, which does receive `session_id` and `transcript_path`, proves ownership by finding the nonce marker in its own transcript. A pending file whose nonce is in no transcript is left alone for its owner and expires after the TTL.
+A slash command's shell has no reliable handle on the current session id: it is delivered to hooks on stdin, not exposed to the Bash tool (the environment variables the docs list for hook and Bash subprocesses carry a session id only for Remote Control and cloud sessions), and the per-project transcript directory can hold many files from parallel sessions, so "the newest transcript" is not this session either. The store step therefore keys by an unguessable nonce, and the PreCompact hook, which does receive `session_id` and `transcript_path`, proves ownership by finding the nonce marker in its own transcript. A pending file whose nonce is in no transcript is left alone for its owner and expires after the TTL.
+
+The transcript is the only proof, so a copied transcript is the one case it cannot settle. The sessions docs say `/branch` copies the transcript; a session branched after `/compact-check` carries the same marker as the original. Whichever of the two compacts first claims the pending file (the claim is a rename, so it happens once); the other finds nothing and gets no block. The kit does not try to tell the two apart.
 
 ### Why PreCompact and not SessionStart for the ownership step
 
@@ -57,7 +59,7 @@ The hooks reference documents `initialUserMessage` as the first user message "in
 
 ### Guarantees the scripts give
 
-- Session-scoped: keyed by `session_id`; one session's block can never surface in another.
+- Session-keyed: committed under `session_id`, and a block is committed only for a session whose transcript holds the store marker. A session branched after the store step shares that transcript; then whichever session compacts first takes the block (see "Why the nonce").
 - Fires once: the committed file is claimed by rename and deleted before the text is emitted, so a racing second run finds nothing.
 - An older block cannot resurface: the precompact step keeps only the newest owned pending file, and every stage drops files older than `COMPACT_RESUME_TTL_SECONDS` (30 minutes by default).
 - Silent when unused: an auto-compact, or any compaction without a prior `/compact-check`, finds no committed file and emits nothing.
@@ -71,23 +73,27 @@ The hooks reference documents `initialUserMessage` as the first user message "in
 | `PreCompact` has matchers `manual` / `auto`; `SessionStart` has `startup` / `resume` / `clear` / `compact` / `fork` | documented (hooks reference, checked 2026-10-22) |
 | `SessionStart` output accepts `additionalContext`; `initialUserMessage` is for `-p` mode | documented |
 | Stop input carries `last_assistant_message` and `stop_hook_active`; exit 2 blocks and hands stderr to Claude | documented |
-| `UserPromptSubmit` input carries `prompt`; the transcript file may lag the current turn | documented |
+| `UserPromptSubmit` input carries `prompt`; the transcript file "may lag the in-memory conversation" and "isn't guaranteed to include the final message at Stop time on all versions" | documented |
+| `prompt_id` is the same on UserPromptSubmit and Stop within one turn | documented field; the pairing is observed on the author's machine |
 | Messages typed while Claude is busy are queued and sent when the turn ends | documented (interactive mode) |
 | The queue also holds a message typed during a compaction | observed on the author's machine (2026-08-04), not in the docs |
 | `session_id` is identical on the PreCompact and the post-compact SessionStart side | measured on the author's machine, not promised by the docs |
+| `/branch` copies the transcript, so a branched session holds the original's store marker | documented (sessions) |
 | Bash tool stdout is stored verbatim in the transcript file | observed; the nonce lookup depends on it |
-| Typing `/` opens the autocomplete menu, in which Enter is not bound | documented (keybindings: Autocomplete context binds Tab, Escape, Up, Down) |
-| A synthetic Enter arriving while the menu is open does nothing | observed on the author's machine |
+| Plain Enter does not submit while an autocomplete suggestion is highlighted; Escape dismisses the menu | documented (keybindings: `chat:queueSubmit` description, Autocomplete context) |
+| In fullscreen rendering the command list opens with no row highlighted and Enter submits as typed | documented (interactive mode) |
+| A synthetic Enter arriving while the menu is open leaves the command typed but unsent | observed on the author's machine (desktop app) |
 
 ## The terse gate
 
-`terse-prompt-stash.sh` writes each prompt to `<state>/terse/prompt-<session>-<prompt_id>` (mode 600, deleted after a day). `terse-gate.sh` reads it back on Stop, strips fenced code and quoted lines from `last_assistant_message`, counts words and lines, and when the prompt contained `tldr` and the reply exceeds 10 lines or 130 words, exits 2 with the rewrite instruction on stderr. `stop_hook_active` plus a per-turn marker file guarantee at most one block per turn. Every turn is logged to a TSV, whatever the verdict, so `terse-report.sh` can show the trend. A filler-phrase score is computed alongside and only logged by default.
+`terse-prompt-stash.sh` writes each prompt to `<state>/terse/prompt-<session>-<prompt_id>` (mode 600, deleted after a day). `terse-gate.sh` reads it back on Stop, strips fenced code and quoted lines from `last_assistant_message`, counts words and lines, and when the prompt contained `tldr` and the reply exceeds 10 lines or 130 words, exits 2 with the rewrite instruction on stderr. The ceiling applies to every tldr turn; the minimum-word threshold only exempts short replies from the filler score. The Stop payload reaches the Python part through a private temp file, not an environment variable, so a very long reply cannot push the hook over the OS limit on a single environment string. `stop_hook_active` plus a per-turn marker file guarantee at most one block per turn. Every turn is logged to a TSV, whatever the verdict, so `terse-report.sh` can show the trend. A filler-phrase score is computed alongside and only logged by default.
 
 ## State directory
 
 ```
 <config dir>/session-workflow-kit/
-  manifest.json            commit, time, options, file list, backup dir of the last install
+  manifest.json            commit, time, what the kit created / replaced (with each original's backup),
+                           which registrations it added, what it did to CLAUDE.md; kept across upgrades
   backups/<timestamp>/     one directory per install/uninstall run; never overwritten
   state/                   mode 700
     compact-resume/pending/<nonce>.md
@@ -100,9 +106,10 @@ The hooks reference documents `initialUserMessage` as the first user message "in
 
 ## The installer
 
-`install/install.sh` is a thin orchestrator; the two edits with real logic are Python:
+`install/install.sh` is a thin orchestrator; the edits with real logic are Python:
 
-- `merge-settings.py` adds hook registrations keyed by event + matcher + script name. It never copies a settings file wholesale, aborts on invalid JSON or a wrong shape with nothing written, treats a hook that already runs the script as present (whatever its matcher), appends to the existing group with the same matcher or creates one, preserves the file's indentation, prints a unified diff, and writes through a temp file and rename after taking a timestamped backup. `remove` does the inverse; `check` verifies.
-- `update-claude-md.py` replaces the text between the two markers, or appends the block after a blank line, or creates the file. Lines outside the block that mention `tldr` or a word/line ceiling are printed as warnings and left alone. Same diff, backup and atomic write.
+- `merge-settings.py` adds hook registrations keyed by event + matcher + resolved script path. It never copies a settings file wholesale and aborts on invalid JSON or a wrong shape with nothing written. A registration counts as present only when a command hook under the same event and matcher runs the script at the kit's hooks directory (`~` and `$HOME` expanded); a hook that names the script under another matcher or path is reported as a conflict, left alone, and the kit's own registration is added next to it. The command string is quoted with `shlex` when the path needs it. It appends to the existing group with the same matcher or creates one, preserves the file's indentation, prints a unified diff, and writes through a temp file and rename after taking a backup; a backup that fails stops the write. `remove` takes the exact list of registrations to drop (from the manifest) or, without one, drops every hook that resolves to a kit script under the hooks directory. `check` verifies with the same matching.
+- `update-claude-md.py` replaces the text between the two markers, or appends the block after a blank line, or creates the file. Lines outside the block that mention `tldr` or a word/line ceiling are printed as warnings and left alone. Same diff, backup and atomic write. `remove --delete-if-empty` deletes a file that held nothing but the block.
+- `manifest.py` keeps the install record: per file whether the kit created it or replaced an original (and where that original's backup is), which registrations were added, what happened to `CLAUDE.md`. First provenance wins across upgrades, so the original from the first install stays restorable. `prune` drops entries as uninstall undoes them and deletes the manifest only when nothing managed remains.
 
-`install.sh` validates both targets before copying a single file, so a malformed `settings.json` aborts the whole run with nothing changed. `apply` needs either a terminal (it asks per file) or `--yes` (the agent passes it after the user approved the plan). `verify` runs the compact-resume hooks on sample input in a temporary state directory and checks a second inject emits nothing. `tests/run.sh` exercises all of this against a throwaway `HOME`: fresh install, repeat install, pre-existing hooks and CLAUDE.md, malformed settings, custom config directory, upgrade, uninstall.
+`install.sh` validates both structured targets before copying a single file, so a malformed `settings.json` aborts the whole run with nothing changed. Every replacement is preceded by a backup; if the backup cannot be made the run stops with exit 5 and the target untouched. `apply` needs either a terminal (it asks per change, permission changes included) or `--yes` (the agent passes it after the user approved the plan); a declined change changes nothing. Paths are passed as arguments and replaced literally, never through `sed` or shell interpolation, so a config directory with `$`, `&`, `#`, spaces or quotes works. `verify` runs the compact-resume hooks on sample input in a temporary state directory and checks a second inject emits nothing. `uninstall` reads the manifest and undoes exactly what it records. `tests/run.sh` exercises all of this against a throwaway `HOME`: fresh install, repeat install, pre-existing hooks and CLAUDE.md, conflicting registrations, malformed settings, unwritable backup directory, custom and odd config directories, declined prompts, upgrade, uninstall with restore.

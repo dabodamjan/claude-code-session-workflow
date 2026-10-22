@@ -124,7 +124,18 @@ Fix plan:
 
 ### CONFLICTING / DIRTY PR (base advanced after the branch was pushed)
 
-Prefer a merge of the base into the branch when the PR will be squash-merged: `git merge origin/<base>`, resolve once, then a normal `git push`. The squash discards the merge commit, so the base history stays linear anyway, and no history is rewritten. Use a rebase only when the PR is merged with a merge commit or rebase, or when the user asks for one.
+Prefer a merge of the base into the branch when the PR will be squash-merged: `git merge origin/<base>`, resolve once, then a normal `git push`. The squash discards the merge commit, so the base history stays linear anyway, and no history is rewritten. This is merging the base INTO the working branch, which §6 permits after the user's yes; it is not merging the PR, which stays the user's action. Use a rebase only when the PR is merged with a merge commit or rebase, or when the user asks for one.
+
+Merge template (steps 2 and 4 need the user's yes):
+
+```
+Fix plan, resolves a CONFLICTING PR:
+1. git fetch origin <base>
+2. git merge origin/<base>, resolving each conflict.
+3. Verify: no conflict markers remain, and git diff origin/<base> --stat shows only the intended files.
+4. git push
+5. Re-check: gh pr view <n> --json mergeable,mergeStateStatus, expect MERGEABLE / CLEAN.
+```
 
 Rebase template (every step past 1 needs the user's yes, because it rewrites a pushed branch):
 
@@ -144,8 +155,8 @@ Fix plan, resolves a CONFLICTING PR:
 These commands never assume standing permission. In every session:
 
 - **Commit locally** only when the user has said so in this session (an explicit "commit it", or a yes to a fix plan that names the commit). Stage explicit paths, never `git add -A`.
-- **Never push, open a PR, rebase, force-push, reset, or delete a branch** without the user's explicit yes in this session, given after you stated the exact command and target. A yes to one of these does not carry over to the next one, and never carries over from an earlier session.
-- **Never merge.** Merging is the user's action.
+- **Never push, open a PR, rebase, force-push, reset, merge a base branch into the working branch, or delete a branch** without the user's explicit yes in this session, given after you stated the exact command and target. A yes to one of these does not carry over to the next one, and never carries over from an earlier session.
+- **Never merge a PR.** Merging the PR into its base is the user's action, from wherever they merge. Merging the base INTO the working branch to resolve a conflict (§5) is allowed after the user's yes to that command; it changes only the working branch.
 - Writing files to disk (saving a plan, a decision, a draft) is always allowed; that is the point of these commands.
 
 If a user wants a looser default (for example "always push feature branches"), that belongs in their own CLAUDE.md, not in these commands.

@@ -42,6 +42,6 @@ Quick sanity alongside: `git status --short` and `git status -sb`. A dirty tree 
 **Gate passes** (all merged, or the session opened no PRs, and the tree is clean) **→** archive:
 
 1. State the outcome in one line first ("All N PRs merged. Archiving this session."), because the conversation ends after the tool call.
-2. Call the archive tool for this session (on the author's desktop app the tool takes `session_id: "self"` and a short `reason`; follow the tool's own schema if it differs). The desktop app shows its own confirmation prompt; that is the final gate, so do not re-ask in chat before the call.
+2. Call the archive tool for this session (on the author's desktop app the tool takes `session_id: "self"` and a short `reason`; follow the tool's own schema if it differs). Invoking this command authorizes archiving after the checks pass. In Manual mode the desktop app shows an approval card before archiving; in Auto or Bypass permissions mode it does not and may archive immediately, so the merge gate above and your one-line outcome statement are the only checks. Do not re-ask in chat.
 
 Worktree cleanup is handled by the archive itself. Do not delete local branches; merged branches are cleanup for another day, not this command's job.

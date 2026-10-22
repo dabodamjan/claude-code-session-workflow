@@ -11,11 +11,11 @@ Pre-compact audit. Compacting drops the prompt cache and replaces the conversati
 
 ## Detect which repos to check
 
-Read `~/.claude/includes/session-audit-core.md` and apply **§1**.
+Read `~/.claude/includes/session-audit-core.md` once, then apply **§1**.
 
 ## Run these checks in parallel
 
-Read `~/.claude/includes/session-audit-core.md` and apply **§2** (checks 1 to 9 and the "do not run" list) and **§3** (the check-9 unwritten-content detail).
+Apply **§2** (checks 1 to 9 and the "do not run" list) and **§3** (the check-9 unwritten-content detail) of the include.
 
 **compact-check verdict mapping for §2 and §3:**
 - Severity symbols are 🟢 / 🟡 / 🔴.
@@ -139,7 +139,7 @@ The helper writes a pending copy and prints a `compact-resume:stored:<nonce>` ma
 
 ## Output discipline
 
-Read `~/.claude/includes/session-audit-core.md` and apply **§7**. compact-check specifics on top of the shared rules:
+Apply **§7** of the include. compact-check specifics on top of the shared rules:
 
 - The clean-exit hand-off is the **Copy-paste resume** (3b). Never emit it alongside a 🟡 or 🔴 verdict, and never tell the user they are "clear to compact" while non-green.
 - **PRs the user still needs to merge go last, in normal text** (§7 merge-links-last): after the resume block, one plain markdown line per pending-merge PR with the full `https://github.com/...` URL, outside any fence. This footer is the only thing allowed after the resume block.
