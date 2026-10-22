@@ -40,7 +40,7 @@ These are the steps for the agent. If you are a person reading this, you can fol
    ```
    Stop and report if `python3` or `jq` is missing, or if the existing `settings.json` is not valid JSON (the installer will refuse to touch it). Tell the user which surface they are on: `/archive-session` only works in the desktop app, and the keyboard shortcuts only on macOS with Karabiner-Elements.
 
-3. **Ask about the two optional components before planning.** The terse gate (`--terse-gate`) blocks over-long replies when the user typed `tldr`; it is useful but opinionated. Tell the user the stash hook keeps a copy of each prompt on disk for 24 hours (a private file under the kit's state directory; the Stop hook needs it to know `tldr` was asked for). The keyboard shortcuts (`--karabiner`) need Karabiner-Elements. Default to neither unless the user says yes.
+3. **Ask about the two optional components before planning.** The terse gate (`--terse-gate`) blocks over-long replies when the user typed `tldr`; it is useful but opinionated. Tell the user the stash hook keeps a copy of each prompt on disk (a private file under the kit's state directory; the Stop hook needs it to know `tldr` was asked for). Prompt files older than 24 hours are deleted on the next stash-hook run; without another run, they remain on disk. The keyboard shortcuts (`--karabiner`) need Karabiner-Elements. Default to neither unless the user says yes.
 
 4. **Plan, and show the user the output.**
    ```
@@ -120,8 +120,8 @@ Undoes what the manifest recorded, each item after a prompt (or all at once with
 
 - a file the kit created is deleted; a file the kit replaced is restored from the backup of the original
 - only the hook registrations the kit added are removed; one that was already there, even if it runs a kit script, stays
-- the `CLAUDE.md` block is removed; a `CLAUDE.md` the kit created is deleted if nothing else is in it, and one the kit appended to keeps everything outside the block
-- the Karabiner rule file is deleted or restored the same way (disable the rule in the UI first)
+- the `CLAUDE.md` block is removed when the manifest records that the kit wrote it; a block that was already in place stays; a `CLAUDE.md` the kit created is deleted if nothing else is in it, and one the kit appended to keeps everything outside the block
+- the Karabiner rule file is deleted or restored the same way when the manifest records it (disable the rule in the UI first); a rule file the install did not write stays
 - the manifest is deleted only when nothing managed remains; a declined prompt keeps it, so a later run can finish the job
 
 Backups and logs under `session-workflow-kit/` are kept. Without a manifest (a manual install), the kit's files are removed by name and registrations that run a kit script under the hooks directory are removed; nothing can be restored that way.
