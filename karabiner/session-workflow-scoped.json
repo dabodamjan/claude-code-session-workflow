@@ -96,7 +96,8 @@
                 "^com\\.anthropic\\.claudefordesktop$",
                 "^com\\.apple\\.Terminal$",
                 "^com\\.mitchellh\\.ghostty$",
-                "^com\\.microsoft\\.VSCode$"
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
               ]
             }
           ]
@@ -190,7 +191,8 @@
                 "^com\\.anthropic\\.claudefordesktop$",
                 "^com\\.apple\\.Terminal$",
                 "^com\\.mitchellh\\.ghostty$",
-                "^com\\.microsoft\\.VSCode$"
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
               ]
             }
           ]
@@ -247,7 +249,8 @@
                 "^com\\.anthropic\\.claudefordesktop$",
                 "^com\\.apple\\.Terminal$",
                 "^com\\.mitchellh\\.ghostty$",
-                "^com\\.microsoft\\.VSCode$"
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
               ]
             }
           ]
@@ -341,7 +344,8 @@
                 "^com\\.anthropic\\.claudefordesktop$",
                 "^com\\.apple\\.Terminal$",
                 "^com\\.mitchellh\\.ghostty$",
-                "^com\\.microsoft\\.VSCode$"
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
               ]
             }
           ]
@@ -451,7 +455,8 @@
                 "^com\\.anthropic\\.claudefordesktop$",
                 "^com\\.apple\\.Terminal$",
                 "^com\\.mitchellh\\.ghostty$",
-                "^com\\.microsoft\\.VSCode$"
+                "^com\\.microsoft\\.VSCode$",
+                "^com\\.googlecode\\.iterm2$"
               ]
             }
           ]

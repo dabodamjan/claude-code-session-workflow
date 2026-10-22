@@ -37,14 +37,17 @@ CHORDS = [
     ("backslash", "/archive-session",  True,  None),
 ]
 
-# Bundle identifiers the scoped variant fires in. Each was read from the app's Info.plist
-# on the author's Mac on 2026-10-22. Add your own terminal: Karabiner-EventViewer >
-# Frontmost Application tab shows the identifier of whatever app is in front.
+# Bundle identifiers the scoped variant fires in. The first four were read from each app's
+# Info.plist on the author's Mac on 2026-10-22; iTerm2 is the identifier the Karabiner
+# documentation itself uses as its frontmost_application example (not verified locally).
+# Add your own terminal: Karabiner-EventViewer > Frontmost Application tab shows the
+# identifier of whatever app is in front.
 BUNDLE_IDS = [
     "^com\\.anthropic\\.claudefordesktop$",   # Claude desktop app
     "^com\\.apple\\.Terminal$",              # Terminal.app
     "^com\\.mitchellh\\.ghostty$",           # Ghostty
     "^com\\.microsoft\\.VSCode$",            # Visual Studio Code
+    "^com\\.googlecode\\.iterm2$",           # iTerm2
 ]
 
 KEYCODES = {"/": "slash", "-": "hyphen", " ": "spacebar", ".": "period", ",": "comma"}
