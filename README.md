@@ -2,6 +2,10 @@
 
 Keep the plan when you run `/compact`, and never end a session with work that exists only in chat. Four slash commands, two hooks and five one-handed keyboard shortcuts. This is the setup I run every day.
 
+[![The explainer video: Claude Code's /compact is broken. A Claude Code session card with a four-step plan and a context bar.](docs/images/explainer-video.webp)](https://youtu.be/7tXR1H3viRg)
+
+[Watch the explainer on YouTube](https://youtu.be/7tXR1H3viRg): what /compact loses, and what each of the five shortcuts does.
+
 ![Compacting a session. Before: four steps by hand, /compact-check, copy block, /compact, paste block. Now: two keys, Right Option plus comma for /compact-check and Right Option plus period for /compact.](docs/images/before-after.webp)
 
 ## Install with one prompt

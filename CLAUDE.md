@@ -11,7 +11,7 @@ A public kit that installs a session workflow into someone's Claude Code: four s
 - `karabiner/` `build.py` generates both rule files; never edit the JSON by hand
 - `install/` `install.sh` (check / plan / apply / verify / uninstall) plus the three Python helpers it calls: `merge-settings.py` (hook registrations), `update-claude-md.py` (the marked block), `manifest.py` (the install record uninstall replays)
 - `tests/run.sh` the whole suite, in a throwaway HOME
-- `docs/images/` the three figures the README embeds and the 1280x640 social preview; `.github/workflows/tests.yml` runs `tests/run.sh` on a macOS runner for every pull request and every push to `main`
+- `docs/images/` the three figures the README embeds, the explainer video thumbnail and the 1280x640 social preview; `.github/workflows/tests.yml` runs `tests/run.sh` on a macOS runner for every pull request and every push to `main`
 
 ## Rules for changes
 
